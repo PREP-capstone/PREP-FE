@@ -1,5 +1,5 @@
-# PromptLAB-BE
-PromptLAB SERVER
+# PromptLAB-FE
+PromptLAB WEB
 
 ## 🚀 Git 컨벤션 규칙
 
