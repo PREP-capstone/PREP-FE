@@ -1,5 +1,5 @@
-# PromptLAB-FE
-PromptLAB WEB
+# PREP-FE
+PREP WEB
 
 ## 🚀 Git 컨벤션 규칙
 
