@@ -1,0 +1,44 @@
+.sidebar {
+  width: 192px;
+  min-width: 192px;
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.logo {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+.logo-row { display: flex; align-items: center; gap: 8px; }
+.logo-mark {
+  width: 27px; height: 27px;
+  background: #111; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 14px; flex-shrink: 0;
+}
+.logo-name { font-size: 14px; font-weight: 700; letter-spacing: 2.5px; color: #111; }
+.logo-sub  { font-size: 8px; color: #666; margin-top: 2px; letter-spacing: 0.3px; }
+
+.nav { flex: 1; padding: 10px 0; overflow-y: auto; }
+.nav-divider { height: 1px; background: #f0f0f0; margin: 6px 16px; }
+.nav-section { font-size: 9.5px; color: #666; padding: 10px 16px 3px; letter-spacing: 0.7px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 16px; font-size: 13px; color: #666;
+  cursor: pointer; transition: background .1s; text-decoration: none;
+}
+.nav-item:hover { background: #f5f5f5; color: #111; }
+.nav-item.active { background: #f5f5f5; color: #111; font-weight: 500; }
+.nav-item.disabled { opacity: 0.38; pointer-events: none; }
+.nav-item i { font-size: 15px; flex-shrink: 0; }
+
+.sidebar-bottom {
+  padding: 8px 0;
+  border-top: 1px solid #e8e8e8;
+}

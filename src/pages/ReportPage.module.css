@@ -1,0 +1,201 @@
+.page { background: #f5f5f5; color: #111; min-height: 100vh; }
+
+/* ── 상단 네비 ── */
+.topnav { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 52px; position: sticky; top: 0; z-index: 100; }
+.nav-left { display: flex; align-items: center; gap: 14px; }
+.logo-row { display: flex; align-items: center; gap: 7px; text-decoration: none; }
+.logo-mark { width: 24px; height: 24px; background: #111; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 12px; }
+.logo-name { font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #111; }
+.nav-sep { width: 1px; height: 16px; background: #e8e8e8; }
+.page-title { font-size: 13px; color: #666; }
+.nav-right { display: flex; align-items: center; gap: 8px; }
+.nav-btn { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666; background: #fff; border: 1px solid #e8e8e8; padding: 5px 11px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: background .1s; }
+.nav-btn:hover { background: #f5f5f5; }
+.nav-btn i { font-size: 14px; }
+.nav-btn.disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── 컨테이너 ── */
+.container { max-width: 800px; margin: 0 auto; padding: 32px 20px 80px; }
+
+/* ── 아이디어 헤더 ── */
+.idea-header { background: #fff; border-radius: 14px; border: 1px solid #e8e8e8; padding: 24px 28px; margin-bottom: 14px; }
+.ih-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.app-name { font-size: 22px; font-weight: 700; color: #111; }
+.app-sub { font-size: 13px; color: #666; margin-top: 4px; }
+.gate-badge { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 6px; flex-shrink: 0; }
+.gate-badge.pass { background: #f0f7f0; color: #2a7a2a; border: 1px solid #c8e6c9; }
+.gate-badge.fail { background: #fff0f0; color: #c0392b; border: 1px solid #ffcdd2; }
+.gate-badge i { font-size: 14px; }
+.ih-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.ih-tag { font-size: 12px; background: #f5f5f5; color: #666; padding: 3px 10px; border-radius: 12px; border: 1px solid #eee; }
+
+/* ── 종합 지표 ── */
+.indicators { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.ind { border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; background: #fff; }
+.ind.inactive { opacity: .3; pointer-events: none; }
+.ind-name { font-size: 11px; color: #666; margin-bottom: 7px; }
+.ind-val { font-size: 20px; font-weight: 700; margin-bottom: 7px; }
+.ind-val.high { color: #c0392b; }
+.ind-val.mid { color: #d97706; }
+.ind-val.low { color: #2a7a2a; }
+.ind-bar { display: flex; gap: 3px; }
+.bar { width: 26px; height: 5px; border-radius: 2px; background: #eee; }
+.bar.high { background: #c0392b; }
+.bar.mid { background: #d97706; }
+.bar.low { background: #2a7a2a; }
+
+/* ── 삭제 안내 배너 ── */
+.delete-notice { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #777; background: #f0f0f0; border-radius: 8px; padding: 9px 14px; margin-bottom: 14px; }
+.delete-notice i { font-size: 14px; color: #999; flex-shrink: 0; }
+
+/* ── GATE 판정 박스 ── */
+.gate-box { background: #f8f8f8; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; border-left: 3px solid #2563a8; }
+.gate-box-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.gate-box-title { font-size: 12px; font-weight: 700; color: #666; letter-spacing: .4px; }
+.gate-grounds { display: flex; flex-direction: column; gap: 6px; }
+.gate-ground { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #555; line-height: 1.6; }
+
+/* ── 활용 데이터 ── */
+.data-source { margin-top: 18px; padding-top: 14px; border-top: 1px solid #f0f0f0; font-size: 11.5px; color: #666; line-height: 1.7; }
+.data-source b { color: #666; font-weight: 700; }
+
+/* ── 신호등 종합 한 줄 ── */
+.signal { border-radius: 8px; padding: 13px 16px; font-size: 13.5px; line-height: 1.65; margin-bottom: 14px; }
+.signal.yellow { background: #fefce8; border-left: 3px solid #d97706; color: #7a4a00; }
+.signal.green { background: #f0f9f0; border-left: 3px solid #2a7a2a; color: #1a5a1a; }
+.signal.red { background: #fff5f5; border-left: 3px solid #c0392b; color: #7a1a1a; }
+
+/* ── 공통 섹션 ── */
+.section { background: #fff; border-radius: 14px; border: 1px solid #e8e8e8; padding: 26px 28px; margin-bottom: 14px; }
+.sec-title { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 18px; }
+
+/* ── 서비스 분류 ── */
+.classify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.ci { background: #f8f8f8; border-radius: 8px; padding: 12px 14px; }
+.ci-k { font-size: 10.5px; color: #999; margin-bottom: 4px; }
+.ci-v { font-size: 13px; font-weight: 500; color: #111; }
+.target-box { background: #f8f8f8; border-radius: 8px; padding: 14px 16px; font-size: 13.5px; color: #555; line-height: 1.75; }
+.target-box strong { color: #111; }
+
+/* ── 탭 ── */
+.tabs { display: flex; border-bottom: 1px solid #e8e8e8; margin-bottom: 22px; gap: 0; }
+.tab { padding: 9px 20px; font-size: 13.5px; font-weight: 500; color: #999; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .12s; white-space: nowrap; }
+.tab:hover { color: #555; }
+.tab.active { color: #111; border-bottom-color: #111; }
+.tab.disabled { opacity: .35; pointer-events: none; cursor: default; }
+
+/* ── 판단 근거 ── */
+.grounds { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.ground { display: flex; gap: 10px; align-items: flex-start; background: #f8f8f8; border-radius: 8px; padding: 12px 14px; font-size: 13.5px; color: #444; line-height: 1.55; }
+.g-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; background: #888; }
+.g-dot.high { background: #c0392b; }
+
+/* ── Before → After ── */
+.ba-section-title { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 10px; }
+.ba-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 22px; }
+.ba-item { display: flex; align-items: center; gap: 12px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; padding: 11px 15px; font-size: 13px; }
+.ba-before { color: #c0392b; text-decoration: line-through; }
+.ba-arr { color: #999; font-size: 16px; }
+.ba-after { color: #2a7a2a; font-weight: 600; }
+
+/* ── 다음 액션 ── */
+.actions { display: flex; flex-direction: column; gap: 0; }
+.action { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+.action:last-child { border-bottom: none; }
+.act-n { width: 24px; height: 24px; border-radius: 50%; background: #111; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.act-text { font-size: 13.5px; color: #333; line-height: 1.6; }
+.act-ref { font-size: 11.5px; color: #777; margin-top: 3px; }
+
+/* ── 데이터 소스 ── */
+.sub-title { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 10px; }
+.ds-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+.ds-item { display: flex; justify-content: space-between; align-items: center; background: #f8f8f8; border-radius: 8px; padding: 11px 14px; font-size: 13px; }
+.ds-name { color: #111; font-weight: 500; }
+.ds-right { display: flex; align-items: center; gap: 8px; }
+.ds-url { font-size: 11.5px; color: #666; }
+.diff { font-size: 11px; font-weight: 700; border-radius: 4px; padding: 2px 8px; }
+.diff.easy { background: #f0f7f0; color: #2a7a2a; }
+.diff.mid { background: #fef9ee; color: #7a4a00; }
+.diff.hard { background: #fff0f0; color: #c0392b; }
+
+/* ── MVP 박스 ── */
+.mvp-box { background: #fffbea; border-left: 3px solid #d97706; border-radius: 0 8px 8px 0; padding: 13px 15px; font-size: 13px; color: #78350f; line-height: 1.65; margin-bottom: 18px; }
+.mvp-label { font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+.mvp-label i { font-size: 14px; }
+
+/* ── 로드맵 ── */
+.roadmap { display: flex; }
+.stage { flex: 1; padding: 14px 16px; border: 1px solid #e8e8e8; }
+.stage:first-child { border-radius: 10px 0 0 10px; }
+.stage:last-child { border-radius: 0 10px 10px 0; }
+.stage:not(:first-child) { border-left: none; }
+.stage-lbl { font-size: 10px; font-weight: 700; color: #999; letter-spacing: .5px; margin-bottom: 5px; }
+.stage-name { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 5px; }
+.stage-desc { font-size: 12px; color: #666; line-height: 1.5; }
+.stage.now { background: #111; border-color: #111; }
+.stage.now .stage-lbl { color: #777; }
+.stage.now .stage-name { color: #fff; }
+.stage.now .stage-desc { color: #999; }
+
+/* ── 경쟁사 ── */
+.comp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+.comp-card { border: 1px solid #e8e8e8; border-radius: 10px; padding: 16px; background: #fff; }
+.comp-name { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 7px; }
+.comp-feat { font-size: 12px; color: #555; margin-bottom: 4px; line-height: 1.5; }
+.comp-limit { font-size: 12px; color: #666; margin-bottom: 10px; line-height: 1.5; }
+.comp-badge { font-size: 11px; font-weight: 700; border-radius: 10px; padding: 3px 10px; display: inline-block; }
+.comp-badge.enter { background: #f0f7f0; color: #2a7a2a; }
+.comp-badge.caution { background: #fef9ee; color: #7a4a00; }
+
+/* ── 차별화 ── */
+.diff-box { background: #faf7ff; border-left: 3px solid #7c4ec4; border-radius: 10px; padding: 16px 18px; font-size: 13.5px; color: #333; line-height: 1.75; }
+.diff-label { font-size: 11px; font-weight: 700; color: #2563a8; letter-spacing: .4px; margin-bottom: 6px; }
+
+/* ── BM 카드 ── */
+.bm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bm-card { border: 1.5px solid #e8e8e8; border-radius: 12px; padding: 20px; }
+.bm-type { font-size: 10px; font-weight: 700; color: #666; letter-spacing: .7px; margin-bottom: 5px; }
+.bm-name { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 14px; }
+.bm-rows { display: flex; flex-direction: column; gap: 0; }
+.bm-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+.bm-row:last-child { border-bottom: none; padding-bottom: 0; }
+.bm-key { color: #666; }
+.bm-val { color: #222; font-weight: 500; text-align: right; max-width: 55%; }
+
+/* ── 종합 요약 ── */
+.summary-text { background: #f8f8f8; border-left: 3px solid #444; border-radius: 0 10px 10px 0; padding: 18px; font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 22px; }
+.action-group { margin-bottom: 16px; }
+.ag-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 5px; margin-bottom: 10px; }
+.ag-tag.now { background: #c0392b; color: #fff; }
+.ag-tag.launch { background: #2563a8; color: #fff; }
+.ag-steps { display: flex; flex-direction: column; gap: 7px; }
+.ag-step { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: #444; border-radius: 8px; padding: 11px 14px; line-height: 1.6; background: #fafafa; }
+.action-group:has(.ag-tag.now) .ag-step { background: #fff5f5; border-left: 3px solid #f1c2c2; }
+.action-group:has(.ag-tag.launch) .ag-step { background: #f0f6fc; border-left: 3px solid #c0d7ef; }
+.step-n { font-weight: 700; flex-shrink: 0; }
+.action-group:has(.ag-tag.now) .step-n { color: #c0392b; }
+.action-group:has(.ag-tag.launch) .step-n { color: #2563a8; }
+
+/* ── §02 데이터 확보 난이도 카드 ── */
+.acq-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.acq-card { border-radius: 10px; padding: 14px; text-align: center; border: 1px solid #e8e8e8; background: #fff; }
+.acq-icon i { font-size: 24px; }
+.acq-card.easy .acq-icon i { color: #2a7a2a; }
+.acq-card.mid .acq-icon i { color: #d97706; }
+.acq-card.hard .acq-icon i { color: #c0392b; }
+.acq-name { font-size: 12.5px; font-weight: 700; color: #333; margin: 8px 0 4px; }
+.acq-level { font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 10px; display: inline-block; margin-bottom: 5px; }
+.acq-card.easy .acq-level { background: #2a7a2a; color: #fff; }
+.acq-card.mid .acq-level { background: #d97706; color: #fff; }
+.acq-card.hard .acq-level { background: #c0392b; color: #fff; }
+.acq-desc { font-size: 11px; color: #888; }
+
+/* ── §03 시장 현실성 지표 카드 ── */
+.mkt-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.mkt-card { border-radius: 10px; padding: 14px; border: 1px solid #e8e8e8; background: #fff; text-align: center; }
+.mkt-name { font-size: 11px; color: #888; margin-bottom: 6px; }
+.mkt-level { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.mkt-card.high .mkt-level { color: #2a7a2a; }
+.mkt-card.mid .mkt-level { color: #d97706; }
+.mkt-card.low .mkt-level { color: #c0392b; }
+.mkt-desc { font-size: 11px; color: #888; }
