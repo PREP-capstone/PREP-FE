@@ -21,7 +21,7 @@
 .step-header h1 { font-size: 20px; font-weight: 700; color: #111; margin-bottom: 6px; }
 .step-header p { font-size: 12.5px; color: #555; }
 .progress { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
-.prog-bar { width: 44px; height: 4px; border-radius: 2px; background: #e8e8e8; transition: background .25s; }
+.prog-bar { width: 34px; height: 4px; border-radius: 2px; background: #e8e8e8; transition: background .25s; }
 .prog-bar.active { background: #111; }
 .prog-bar.done { background: #888; }
 
@@ -31,28 +31,35 @@
 .sec-num { width: 20px; height: 20px; background: #111; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sec-head h2 { font-size: 14px; font-weight: 500; color: #111; }
 .opt { font-size: 11px; color: #777; font-weight: 400; margin-left: 2px; }
+.req-badge { font-size: 10px; color: #fff; background: #c0392b; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 4px; letter-spacing: .2px; }
+.opt-badge { font-size: 10px; color: #666; background: #eee; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 4px; letter-spacing: .2px; }
 
 /* ── 카드 ── */
 .card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 18px; }
 
-/* ── textarea ── */
+/* ── textarea / input ── */
 .card textarea { width: 100%; height: 108px; padding: 12px 14px; border: 1px solid #e8e8e8; border-radius: 8px; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; color: #111; resize: none; outline: none; background: #fafafa; line-height: 1.7; transition: border-color .15s; }
 .card textarea:focus { border-color: #555; background: #fff; }
 .card textarea::placeholder { color: #777; }
+.card input[type="text"] { width: 100%; padding: 10px 13px; border: 1px solid #e8e8e8; border-radius: 8px; font-size: 13px; color: #111; outline: none; background: #fafafa; transition: border-color .15s; }
+.card input[type="text"]:focus { border-color: #555; background: #fff; }
+.card input[type="text"]::placeholder { color: #777; }
 
 /* ── 데이터 태그 ── */
 .group { margin-bottom: 16px; }
 .group:last-child { margin-bottom: 0; }
 .group-name { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #666; letter-spacing: .7px; text-transform: uppercase; margin-bottom: 7px; }
+.group-name .sens-tag { text-transform: none; font-weight: 500; color: #b5471f; font-size: 10px; letter-spacing: 0; margin-left: 2px; }
 .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 .dot-l { background: #bbb; }
 .dot-m { background: #888; }
-.dot-h { background: #444; }
+.dot-h { background: #c0392b; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { padding: 5px 12px; border-radius: 16px; border: 1px solid #e8e8e8; background: #fff; font-size: 12px; color: #666; cursor: pointer; font-family: inherit; transition: all .1s; display: flex; align-items: center; gap: 4px; }
 .tag i { font-size: 12px; }
 .tag:hover { border-color: #666; color: #555; }
 .tag.on { background: #111; border-color: #111; color: #fff; }
+.tag.sensitive.on { background: #b5471f; border-color: #b5471f; }
 .etc-row { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
 .etc-inp { flex: 1; padding: 5px 12px; border: 1px solid #e8e8e8; border-radius: 16px; font-size: 12px; font-family: inherit; color: #111; outline: none; background: #fff; transition: border-color .15s; }
 .etc-inp:focus { border-color: #555; }
@@ -96,8 +103,33 @@
 /* ── 미입력 안내 ── */
 .notice { display: flex; align-items: flex-start; gap: 7px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 11.5px; color: #666; line-height: 1.6; }
 .notice i { font-size: 14px; color: #777; flex-shrink: 0; margin-top: 1px; }
+.notice.warn { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+.notice.warn i { color: #c2620f; }
 
 /* ── 길이 경고 ── */
 .warn-box { display: none; align-items: flex-start; gap: 8px; background: #fffbea; border-left: 3px solid #d97706; border-radius: 0 8px 8px 0; padding: 10px 13px; margin-top: 10px; font-size: 12.5px; color: #78350f; line-height: 1.6; }
 .warn-box.show { display: flex; }
 .warn-box i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── 카테고리 추천 안내 ── */
+.cat-reco { display: flex; align-items: center; gap: 8px; background: #f0f6fc; border: 1px solid #c9dcef; border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; font-size: 12px; color: #1c4e80; }
+.cat-reco i { font-size: 15px; }
+.pill-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.pill { padding: 8px 14px; border-radius: 8px; border: 1px solid #e8e8e8; background: #fff; font-size: 12.5px; color: #444; cursor: pointer; font-family: inherit; transition: all .1s; }
+.pill:hover { border-color: #666; }
+.pill.on { background: #111; border-color: #111; color: #fff; }
+.pill.reco::after { content: ' · 추천'; font-size: 10px; opacity: .65; }
+.pill.on.reco::after { opacity: .85; }
+.manual-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.manual-row input { flex: 1; padding: 7px 11px; border: 1px solid #e8e8e8; border-radius: 8px; font-size: 12px; outline: none; font-family: inherit; }
+.manual-row input:focus { border-color: #555; }
+.cat-group { margin-bottom: 18px; }
+.cat-group:last-child { margin-bottom: 0; }
+.cat-label { font-size: 11.5px; font-weight: 700; color: #333; margin-bottom: 8px; }
+.cat-off-warn { display: none; align-items: center; gap: 6px; font-size: 11.5px; color: #b5471f; background: #fdf1ea; border-radius: 6px; padding: 7px 10px; margin-top: 8px; }
+.cat-off-warn.show { display: flex; }
+.cat-off-warn i { font-size: 14px; }
+
+/* ── 타겟 자동 채움 ── */
+.target-preview { background: #f8f8f8; border-radius: 8px; padding: 10px 13px; font-size: 12px; color: #555; margin-top: 8px; display: flex; gap: 6px; align-items: baseline; }
+.target-preview b { color: #111; font-weight: 700; }

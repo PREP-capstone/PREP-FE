@@ -28,9 +28,6 @@ export default function Sidebar({ active }) {
         <a className={cx(styles, 'nav-item', 'disabled')} href="#!">
           <i className="ti ti-wallet"></i>지원금 매칭
         </a>
-        <a className={cx(styles, 'nav-item', 'disabled')} href="#!">
-          <i className="ti ti-file-description"></i>창업 제안서
-        </a>
       </div>
 
       <div className={styles['sidebar-bottom']}>
