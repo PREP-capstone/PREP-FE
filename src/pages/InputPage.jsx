@@ -2,8 +2,21 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { cx } from '../utils/cx';
-import { evaluateGate } from '../data/reportMock';
+import { runLocalJudge } from '../mock/localJudge';
+import { saveReport } from '../utils/sessionStore';
 import styles from './InputPage.module.css';
+
+// tags의 그룹 코드 → HealthDataItemInput.data_type 값 매핑
+// (db_구축_설계서.md gate_matrix.data_type 은 라이프스타일/생체지표 2종 enum이며,
+//  민감정보(S)는 설계서 결정에 따라 생체지표에 포함시키되 is_sensitive=true로 구분한다.
+//  행동데이터(D)는 GATE 판정과 무관하므로 별도 라벨로 보낸다.)
+const HEALTH_DATA_TYPE = {
+  L: '라이프스타일',
+  B: '생체지표',
+  S: '생체지표',
+  D: '행동데이터',
+};
+const IS_SENSITIVE_GROUP = new Set(['S']);
 
 const TITLES = [
   '서비스를 설명해주세요',
@@ -136,6 +149,10 @@ export default function InputPage() {
   const [form, setForm] = useState(new Set(['none']));
   const [purpose, setPurpose] = useState(0);
 
+  // 백엔드 통신 상태
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+
   const warnShort = desc.trim().length > 0 && desc.trim().length < 10;
   const cat1OutOfList = cat1Manual.length > 0 && !CAT1_OPTS.includes(cat1Manual);
   const cat2OutOfList = cat2Manual.length > 0 && !CAT2_OPTS.includes(cat2Manual);
@@ -202,7 +219,58 @@ export default function InputPage() {
     goStep(2);
   }
 
-  function submit(skip) {
+  function buildAnalysisPayload(trimmedDesc) {
+    const targetUsers = [
+      ...Object.entries(tags).filter(([, g]) => g === 'PERSONA').map(([l]) => l),
+      ...Object.entries(tags).filter(([, g]) => g === 'AGE').map(([l]) => l),
+    ];
+
+    const healthDataItems = [
+      ...Object.entries(tags)
+        .filter(([, g]) => HEALTH_DATA_TYPE[g])
+        .map(([label, g]) => ({
+          name: label,
+          data_type: HEALTH_DATA_TYPE[g],
+          source: method.size > 0 ? [...method][0] : 'user_input',
+          is_sensitive: IS_SENSITIVE_GROUP.has(g),
+        })),
+      ...etc.map((label) => ({
+        name: label,
+        data_type: '기타',
+        source: method.size > 0 ? [...method][0] : 'user_input',
+        is_sensitive: false,
+      })),
+    ];
+
+    const serviceTypeValue = form.has('none') ? null : [...form].map((i) => FORM_OPTS[i].name).join('·') || null;
+
+    const sessionPayload = {
+      service_name: svcName.trim(),
+      service_description: trimmedDesc,
+      target_users: targetUsers,
+      service_type: serviceTypeValue,
+      category_1: cat1 || null,
+      category_2: cat2 || null,
+      target: effectiveTarget || null,
+    };
+
+    const healthDataPayload = healthDataItems.length
+      ? {
+          health_data_items: healthDataItems,
+          processing_purpose: [PURPOSE_OPTS[purpose].name],
+          _purposeIndex: purpose, // 로컬 판정용 보조 필드 — 실제 API 요청 시에는 제거하고 보낼 것
+        }
+      : null;
+
+    return { sessionPayload, healthDataPayload };
+  }
+
+  function submit() {
+    if (!svcName.trim()) {
+      setWarnName(true);
+      goStep(1);
+      return;
+    }
     const trimmed = desc.trim();
     if (!trimmed) {
       alert('서비스 설명을 입력해주세요.');
@@ -214,22 +282,20 @@ export default function InputPage() {
       return;
     }
 
-    const gate = evaluateGate({ description: trimmed, purposeIndex: purpose });
-    navigate(gate === 'fail' ? '/report/gate-fail' : '/report', {
-      state: {
-        svcName,
-        description: trimmed,
-        cat1,
-        cat2,
-        tags,
-        etc,
-        target: effectiveTarget,
-        method: [...method],
-        form: [...form],
-        purpose,
-        skip: !!skip,
-      },
-    });
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const { sessionPayload, healthDataPayload } = buildAnalysisPayload(trimmed);
+      const report = runLocalJudge(sessionPayload, healthDataPayload);
+      const sessionId = crypto.randomUUID();
+      report.session.session_id = sessionId;
+      saveReport(sessionId, report);
+      navigate(`/report/${sessionId}`);
+    } catch (err) {
+      setSubmitError(err.message || '분석 처리 중 알 수 없는 오류가 발생했어요.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -333,10 +399,16 @@ export default function InputPage() {
                   </button>
                 </div>
                 <div className={styles['skip-row']}>
-                  <button className={styles['skip-btn']} onClick={() => submit(true)}>
-                    선택 항목 건너뛰고 바로 검진 시작하기
+                  <button className={styles['skip-btn']} onClick={() => submit()} disabled={submitting}>
+                    {submitting ? '검진 요청 중...' : '선택 항목 건너뛰고 바로 검진 시작하기'}
                   </button>
                 </div>
+                {submitError && (
+                  <div className={cx(styles, 'notice', 'warn')} style={{ marginTop: 14 }}>
+                    <i className="ti ti-alert-triangle"></i>
+                    <span>{submitError}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -679,10 +751,16 @@ export default function InputPage() {
                   </div>
                 </div>
 
+                {submitError && (
+                  <div className={cx(styles, 'notice', 'warn')} style={{ marginTop: 4, marginBottom: 4 }}>
+                    <i className="ti ti-alert-triangle"></i>
+                    <span>{submitError}</span>
+                  </div>
+                )}
                 <div className={styles['nav-btns']}>
-                  <button className={styles['btn-prev']} onClick={() => goStep(3)}><i className="ti ti-arrow-left"></i>이전</button>
-                  <button className={styles['btn-next']} onClick={() => submit(false)}>
-                    <i className="ti ti-shield-check"></i>검진 시작하기
+                  <button className={styles['btn-prev']} onClick={() => goStep(3)} disabled={submitting}><i className="ti ti-arrow-left"></i>이전</button>
+                  <button className={styles['btn-next']} onClick={() => submit()} disabled={submitting}>
+                    <i className="ti ti-shield-check"></i>{submitting ? '분석 중...' : '검진 시작하기'}
                   </button>
                 </div>
               </div>
