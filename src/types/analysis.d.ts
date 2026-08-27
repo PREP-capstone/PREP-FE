@@ -1,4 +1,4 @@
-export type Category1Option =
+export type Category1 =
   | '수면'
   | '정신건강'
   | '운동'
@@ -8,9 +8,7 @@ export type Category1Option =
   | '유전자'
   | '미용';
 
-export type Category2Option = '정보제공' | '데이터기록관리' | '매칭연결' | '개입치료';
-export type Category1 = Category1Option | string;
-export type Category2 = Category2Option | string;
+export type Category2 = '정보제공' | '데이터기록관리' | '매칭연결' | '개입치료';
 
 export type HealthDataItemCode =
   | 'lifestyle_001'
@@ -61,8 +59,8 @@ export interface CreateAnalysisSessionResponse {
 }
 
 export interface UpdateSessionCategoryRequest {
-  category_1?: string | null;
-  category_2?: string | null;
+  category_1?: Category1 | null;
+  category_2?: Category2 | null;
   target?: string | null;
 }
 
@@ -71,9 +69,9 @@ export interface CategoryPredictionRequest {
 }
 
 export interface CategoryPredictionResponse {
-  category_1: string;
+  category_1: Category1;
   category_1_confidence?: number;
-  category_2: string;
+  category_2: Category2;
   category_2_confidence?: number;
 }
 

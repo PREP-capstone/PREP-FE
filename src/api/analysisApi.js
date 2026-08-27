@@ -2,6 +2,7 @@ import { apiClient, unwrap } from './client';
 import {
   assertNoValidationErrors,
   hasRegisteredHealthData,
+  validateCategoryPayload,
   validateHealthDataPayload,
 } from '../utils/analysisValidation';
 
@@ -54,6 +55,7 @@ export async function saveHealthData(sessionId, payload, { exists = false } = {}
 
 /** PATCH /api/v1/analysis-sessions/{sessionId}/category → 갱신된 AnalysisSessionDetail */
 export async function updateCategory(sessionId, payload) {
+  assertNoValidationErrors(validateCategoryPayload(payload));
   const res = await apiClient.patch(sessionPath(sessionId, '/category'), payload);
   return unwrap(res);
 }
