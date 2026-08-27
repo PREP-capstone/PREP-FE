@@ -22,6 +22,12 @@ export const passReport = {
     invasive_signal: false,
     verdict: 'CONDITIONAL',
     hardcheck_fired: false,
+    reasoning: [
+      '수면 시간과 심박수는 생체지표 기반 서비스로 분류됩니다.',
+      '기능이 진단이 아닌 루틴 추천과 정보 제공에 머물러 조건부 통과로 판정됩니다.',
+      '의료행위 표현을 줄이면 비의료기기 서비스로 운영 가능성이 높아집니다.',
+      '민감정보 처리 고지와 별도 동의 흐름은 초기 설계에 포함해야 합니다.',
+    ],
   },
   regulatory_risk: {
     regulatory_score: 1,
@@ -44,12 +50,14 @@ export const passReport = {
       {
         risky_text: '수면 장애 개선',
         safe_text: '수면 질 향상',
+        match_source: 'rule',
         legal_basis: { document_id: 'LAW-MED-01', article: '제56조', quote: null },
         exact_phrase_match: true,
       },
       {
         risky_text: '불면증 치료 도움',
         safe_text: '수면 루틴 형성 지원',
+        match_source: 'llm',
         legal_basis: { document_id: 'LAW-MED-01', article: '제56조', quote: null },
         exact_phrase_match: false,
       },
@@ -64,6 +72,24 @@ export const passReport = {
     ],
     privacy_risks: [
       { data_name: '수면 시간', reason: '생체지표로 분류되어 개인정보보호법상 처리 원칙 준수가 필요합니다.' },
+    ],
+    standard_scale_candidates: [
+      {
+        scale_id: 'scale_isi',
+        name: 'ISI',
+        full_name: 'Insomnia Severity Index',
+        category_1: '수면',
+        item_count: 7,
+        scoring_range: '0-28',
+        license_type: '상업적 사용 시 유료·허가 필요',
+        source_url: 'https://eprovide.mapi-trust.org/isi-insomnia-severity-index/',
+        note: '불면 심각도 자가보고 척도이나 상업 서비스 적용 전 사용 허가 확인이 필요합니다.',
+      },
+    ],
+    mvp_roadmap: [
+      { stage: 1, title: '핵심 데이터만 수동 입력으로 검증', description: '초기에는 수동 입력 기반으로 데이터 가치를 검증합니다.' },
+      { stage: 2, title: 'OS 건강앱 연동으로 검증 확장', description: 'HealthKit·Google Fit 연동 후 지속 사용률과 리텐션을 확인합니다.' },
+      { stage: 3, title: '기기 직접연동은 인증 리스크 확인 후 확장', description: '제조사 API 연동은 개인정보와 의료기기 리스크를 검토한 뒤 진행합니다.' },
     ],
   },
   market_feasibility: {
@@ -111,6 +137,14 @@ export const failReport = {
     invasive_signal: true,
     verdict: 'FAIL',
     hardcheck_fired: true,
+    avoidance_redesign: '진단·예측 표현을 제거하고 수면 기록·추이 시각화 중심으로 재설계하세요.',
+    avoidance_certification: '수면무호흡증 진단 기능을 유지하려면 의료기기 인증 트랙 검토가 필요합니다.',
+    reasoning: [
+      '산소포화도와 심박수를 활용한 수면무호흡증 진단은 생체지표 기반 진단 기능입니다.',
+      '기기 직접연동과 침습적 신호가 결합되어 하드체크가 발동했습니다.',
+      'FAIL 판정에서는 데이터·시장·BM 섹션이 실행되지 않을 수 있습니다.',
+      'MVP는 진단 대신 수면 기록과 일반 정보 제공으로 범위를 낮추는 방향이 안전합니다.',
+    ],
   },
   regulatory_risk: {
     ...passReport.regulatory_risk,

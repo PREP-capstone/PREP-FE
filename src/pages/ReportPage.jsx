@@ -46,6 +46,9 @@ export default function ReportPage({ data }) {
     data_feasibility: dataFeas,
     market_feasibility: marketFeas,
     business_model: bm,
+    overall_signal: overallSignal,
+    overall_summary: overallSummary,
+    one_liner: oneLiner,
     next_actions: nextActions = [],
   } = data || {};
 
@@ -89,6 +92,7 @@ export default function ReportPage({ data }) {
             <div>
               <div className={styles['app-name']}>{session.service_name}</div>
               <div className={styles['app-sub']}>{session.service_description}</div>
+              {oneLiner && <div className={styles['app-sub']} style={{ marginTop: 8, color: '#111', fontWeight: 700 }}>{oneLiner}</div>}
             </div>
             {isFail ? (
               <div className={cx(styles, 'gate-badge', 'fail')}><i className="ti ti-shield-x"></i>GATE FAIL · 의료기기 가능성</div>
@@ -100,6 +104,13 @@ export default function ReportPage({ data }) {
               <div className={cx(styles, 'gate-badge', 'pass')}><i className="ti ti-shield-check"></i>GATE PASS · 비의료기기</div>
             )}
           </div>
+          {(overallSignal || overallSummary) && (
+            <div className={styles.ground} style={{ marginTop: 14 }}>
+              {overallSignal && <b>종합 신호등: {overallSignal}</b>}
+              {overallSignal && overallSummary ? ' · ' : ''}
+              {overallSummary}
+            </div>
+          )}
           {(session.category_1 || session.category_2 || session.target) && (
             <div className={styles['ih-tags']}>
               {session.category_1 && <span className={styles['ih-tag']}># {session.category_1}</span>}
@@ -157,10 +168,19 @@ export default function ReportPage({ data }) {
               <div className={styles['gate-box-title']}>의료기기 해당 여부 판정 결과</div>
             </div>
             <div className={styles['gate-grounds']}>
-              <div className={styles['gate-ground']}>
-                <div className={cx(styles, 'g-dot', isFail ? 'high' : undefined)}></div>
-                데이터 유형 <b>{gate.data_type}</b> × 기능 유형 <b>{gate.function_type}</b> 조합으로 판정
-              </div>
+              {(gate.reasoning?.length ?? 0) > 0 ? (
+                gate.reasoning.map((reason, index) => (
+                  <div key={index} className={styles['gate-ground']}>
+                    <div className={cx(styles, 'g-dot', isFail ? 'high' : undefined)}></div>
+                    {reason}
+                  </div>
+                ))
+              ) : (
+                <div className={styles['gate-ground']}>
+                  <div className={cx(styles, 'g-dot', isFail ? 'high' : undefined)}></div>
+                  데이터 유형 <b>{gate.data_type}</b> × 기능 유형 <b>{gate.function_type}</b> 조합으로 판정
+                </div>
+              )}
               {gate.hardcheck_fired && (
                 <div className={styles['gate-ground']}>
                   <div className={cx(styles, 'g-dot', 'high')}></div>
@@ -168,6 +188,22 @@ export default function ReportPage({ data }) {
                 </div>
               )}
             </div>
+            {isFail && (gate.avoidance_redesign || gate.avoidance_certification) && (
+              <div className={styles.grounds} style={{ marginTop: 12 }}>
+                {gate.avoidance_redesign && (
+                  <div className={styles.ground}>
+                    <div className={cx(styles, 'g-dot', 'high')}></div>
+                    {gate.avoidance_redesign}
+                  </div>
+                )}
+                {gate.avoidance_certification && (
+                  <div className={styles.ground}>
+                    <div className={cx(styles, 'g-dot', 'high')}></div>
+                    {gate.avoidance_certification}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -241,6 +277,7 @@ export default function ReportPage({ data }) {
                         <span className={styles['ba-before']}>{c.risky_text}</span>
                         <span className={styles['ba-arr']}>→</span>
                         <span className={styles['ba-after']}>{c.safe_text}</span>
+                        {c.match_source === 'llm' && <span className={styles['ih-tag']}>AI 추정</span>}
                       </div>
                     ))}
                   </div>
@@ -289,6 +326,43 @@ export default function ReportPage({ data }) {
                           <div key={i} className={styles.ground}>
                             <div className={cx(styles, 'g-dot', 'high')}></div>
                             <b>{r.data_name}</b> — {r.reason}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {(dataFeas.standard_scale_candidates?.length ?? 0) > 0 && (
+                    <>
+                      <div className={styles['sub-title']} style={{ marginTop: 18 }}>표준 척도 후보</div>
+                      <div className={styles['ds-list']}>
+                        {dataFeas.standard_scale_candidates.map((scale) => (
+                          <div key={scale.scale_id ?? scale.name} className={styles['scale-card']}>
+                            <div className={styles['scale-head']}>
+                              <span className={styles['ds-name']}>{scale.name} · {scale.full_name}</span>
+                              <div className={styles['ds-right']}>
+                                <span className={cx(styles, 'diff', 'mid')}>{scale.item_count ?? '-'}문항</span>
+                                <span className={styles['ds-url']}>{scale.license_type ?? scale.scoring_range}</span>
+                              </div>
+                            </div>
+                            {scale.note && <div className={styles['scale-note']}>{scale.note}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {(dataFeas.mvp_roadmap?.length ?? 0) > 0 && (
+                    <>
+                      <div className={styles['sub-title']} style={{ marginTop: 18 }}>MVP 로드맵</div>
+                      <div className={styles.actions}>
+                        {[...dataFeas.mvp_roadmap].sort((a, b) => (a.stage ?? 0) - (b.stage ?? 0)).map((stage) => (
+                          <div key={stage.stage ?? stage.title} className={styles.action}>
+                            <div className={styles['act-n']}>{stage.stage}</div>
+                            <div className={styles['act-body']}>
+                              <div className={styles['act-text']}>{stage.title}</div>
+                              {stage.description && <div className={styles['act-ref']}>{stage.description}</div>}
+                            </div>
                           </div>
                         ))}
                       </div>

@@ -1,6 +1,4 @@
-// FastAPI 백엔드와 통신하는 공통 fetch 래퍼.
-// 서버 주소는 .env.local 의 VITE_API_BASE_URL 에서 읽어온다.
-// 배포 서버: https://api.prepwell.shop (퍼블릭 도메인, 항상 접속 가능)
+import { extractApiErrorMessage } from './errors';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.prepwell.shop';
 
@@ -11,18 +9,6 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
   }
-}
-
-// 백엔드는 항상 { isSuccess, code, message, result } 형태(성공)나
-// { isSuccess: false, code, message, result: null } 형태(실패)로 응답한다.
-// 422는 FastAPI 기본 검증 오류 형식({ detail: ValidationError[] })이라 별도 처리한다.
-function extractErrorMessage(status, data) {
-  if (data?.message) return data.message;
-  if (Array.isArray(data?.detail)) {
-    return data.detail.map((d) => d.msg).filter(Boolean).join(', ') || `요청이 실패했어요 (HTTP ${status})`;
-  }
-  if (typeof data?.detail === 'string') return data.detail;
-  return `요청이 실패했어요 (HTTP ${status})`;
 }
 
 async function request(path, { method = 'GET', body, headers, timeoutMs = 20000 } = {}) {
@@ -54,10 +40,10 @@ async function request(path, { method = 'GET', body, headers, timeoutMs = 20000 
   const data = contentType.includes('application/json') ? await res.json().catch(() => null) : null;
 
   if (!res.ok) {
-    throw new ApiError(extractErrorMessage(res.status, data), res.status, data);
+    throw new ApiError(extractApiErrorMessage(res.status, data), res.status, data);
   }
   if (data && data.isSuccess === false) {
-    throw new ApiError(data.message || '요청이 실패했어요.', res.status, data);
+    throw new ApiError(extractApiErrorMessage(res.status, data), res.status, data);
   }
 
   return data;
