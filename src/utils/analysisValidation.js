@@ -41,7 +41,7 @@ export function buildTargetFromUsers(targetUsers = []) {
 
 export function buildHealthDataItemFromCode(itemCode, source, overrides = {}) {
   const catalogItem = getHealthDataCatalogItem(itemCode);
-  if (!catalogItem) return null;
+  if (!catalogItem || !isValidSource(source)) return null;
 
   return {
     name: catalogItem.name,
@@ -55,10 +55,10 @@ export function buildHealthDataItemFromCode(itemCode, source, overrides = {}) {
 
 export function validateCategoryPayload(payload = {}) {
   const errors = [];
-  if (payload.category_1 !== undefined && !isValidCategory1(payload.category_1)) {
+  if (payload.category_1 != null && !isValidCategory1(payload.category_1)) {
     errors.push({ field: 'category_1', message: '목록에 없는 category_1 값입니다.' });
   }
-  if (payload.category_2 !== undefined && !isValidCategory2(payload.category_2)) {
+  if (payload.category_2 != null && !isValidCategory2(payload.category_2)) {
     errors.push({ field: 'category_2', message: '목록에 없는 category_2 값입니다.' });
   }
   return errors;
