@@ -7,13 +7,13 @@ export default function Sidebar({ active }) {
   return (
     <div className={styles.sidebar}>
       <div className={styles.logo}>
-        <div className={styles['logo-row']}>
+        <Link to="/" className={styles['logo-row']}>
           <div className={styles['logo-mark']}>P</div>
           <div>
             <div className={styles['logo-name']}>PREP</div>
             <div className={styles['logo-sub']}>Startup Preparation &amp; Evaluation</div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className={styles.nav}>

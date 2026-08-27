@@ -70,10 +70,10 @@ export default function ReportPage({ data }) {
       {/* 상단 네비 */}
       <div className={styles.topnav}>
         <div className={styles['nav-left']}>
-          <div className={styles['logo-row']}>
+          <button className={styles['logo-row']} onClick={() => navigate('/')}>
             <div className={styles['logo-mark']}>P</div>
             <span className={styles['logo-name']}>PREP</span>
-          </div>
+          </button>
           <div className={styles['nav-sep']}></div>
           <span className={styles['page-title']}>검진 결과 리포트</span>
         </div>
