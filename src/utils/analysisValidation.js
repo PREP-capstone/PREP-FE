@@ -67,12 +67,13 @@ export function validateCategoryPayload(payload = {}) {
 export function validateHealthDataPayload(payload = {}) {
   const errors = [];
   const items = payload.health_data_items ?? [];
+  const hasValidItems = Array.isArray(items);
 
-  if (!Array.isArray(items) || items.length === 0) {
+  if (!hasValidItems || items.length === 0) {
     errors.push({ field: 'health_data_items', message: '검진 데이터 항목을 1개 이상 선택해주세요.' });
   }
 
-  items.forEach((item, index) => {
+  if (hasValidItems) items.forEach((item, index) => {
     if (!item.name) {
       errors.push({ field: `health_data_items.${index}.name`, message: '검진 데이터 이름이 비어 있습니다.' });
     }
@@ -85,7 +86,9 @@ export function validateHealthDataPayload(payload = {}) {
   });
 
   const actions = payload.service_actions ?? [];
-  if (actions.length > 0 && !actions.every(isValidServiceAction)) {
+  if (!Array.isArray(actions)) {
+    errors.push({ field: 'service_actions', message: '활용 목적은 배열로 전달해주세요.' });
+  } else if (actions.length > 0 && !actions.every(isValidServiceAction)) {
     errors.push({ field: 'service_actions', message: '지원하지 않는 활용 목적이 포함되어 있습니다.' });
   }
 

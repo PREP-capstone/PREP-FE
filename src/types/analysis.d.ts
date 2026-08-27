@@ -134,10 +134,10 @@ export interface RegulatoryRiskResult {
 
 export interface DataFeasibilityResult {
   data_feasibility_score?: number;
-  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH';
   available_sources?: Array<{
     data_name?: string;
-    source_type?: string;
+    source_type?: 'public_api' | 'external_api';
     source_name?: string;
   }>;
   privacy_risks?: Array<{
@@ -147,13 +147,13 @@ export interface DataFeasibilityResult {
   standard_scale_candidates?: Array<{
     scale_id?: string;
     name?: string;
-    full_name?: string;
-    category_1?: Category1 | string;
-    item_count?: number;
-    scoring_range?: string;
-    license_type?: string;
-    source_url?: string;
-    note?: string;
+    full_name?: string | null;
+    category_1?: Category1 | null;
+    item_count?: number | null;
+    scoring_range?: string | null;
+    license_type?: string | null;
+    source_url?: string | null;
+    note?: string | null;
   }>;
   mvp_roadmap?: Array<{
     stage?: number;
@@ -199,8 +199,8 @@ export interface EvaluateResult {
   differentiation_point?: string | null;
   bm_card_summaries?: unknown[];
   overall_signal?: '빨강' | '노랑' | '초록';
-  overall_summary?: string;
-  one_liner?: string;
+  overall_summary?: string | null;
+  one_liner?: string | null;
 }
 
 export interface RagChunkLookupRequest {
