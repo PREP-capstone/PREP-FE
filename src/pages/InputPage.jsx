@@ -8,7 +8,6 @@ import {
   saveHealthData,
   updateSessionCategory,
   updateSessionTarget,
-  evaluateSession,
 } from '../api/analysisApi';
 import { isHealthDataAlreadyExistsError } from '../api/errors';
 import {
@@ -321,6 +320,11 @@ export default function InputPage() {
       .filter(([, g]) => DATA_GROUPS.has(g))
       .map(([label]) => {
         const catalog = HEALTH_DATA_CATALOG_BY_NAME[label];
+        // 카탈로그에 없는 라벨(복원/오타/구버전 태그 등)은 크래시 대신 기타 항목처럼 처리한다.
+        // item_code가 없으면 백엔드 점수 계산에서 제외될 뿐 에러는 아니다.
+        if (!catalog) {
+          return { name: label, data_type: 'text', source, is_sensitive: false, item_code: null };
+        }
         return {
           name: label,
           data_type: catalog.data_type,
@@ -401,7 +405,8 @@ export default function InputPage() {
    *   1) 세션 확보 — 신규면 POST /analysis-sessions, 편집이면 기존 session_id 재사용
    *   2) target 저장 — PATCH /category 에 target만 (category_1/2는 A가 STEP2에서 저장)
    *   3) 검진 데이터 저장 — 최초 POST / 이후 PATCH 자동 분기(409 방어 포함)
-   *   4) evaluate 실행 → 리포트로 이동
+   * evaluate 호출은 하지 않는다. /report/:sessionId 로 이동하면 ReportContainer가
+   * evaluate의 단일 책임을 갖고 실행·표시한다(리뷰 반영: 책임 위치를 리포트 화면으로 일원화).
    * @returns {Promise<string>} sessionId
    */
   async function submitToBackend(sessionPayload, healthDataPayload) {
@@ -424,8 +429,10 @@ export default function InputPage() {
     }
 
     // 2) target 저장 (PATCH /category, target만)
-    if (sessionPayload.target) {
-      await updateSessionTarget(sid, sessionPayload.target);
+    //    편집 중(sessionId 존재)에는 값을 비우는 수정도 서버에 반영해야 하므로 항상 호출한다.
+    //    신규 생성 때는 target이 이미 createAnalysisSession에 포함됐으니 값이 있을 때만 보낸다.
+    if (existingSessionId || sessionPayload.target) {
+      await updateSessionTarget(sid, sessionPayload.target ?? null);
     }
 
     // 3) 검진 데이터 저장 (POST/PATCH 분기 + 409 방어)
@@ -443,8 +450,6 @@ export default function InputPage() {
       setHealthDataExists(true);
     }
 
-    // 4) evaluate 실행
-    await evaluateSession(sid);
     return sid;
   }
 
