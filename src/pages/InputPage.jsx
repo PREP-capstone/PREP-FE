@@ -1,22 +1,23 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { cx } from '../utils/cx';
-import { runLocalJudge } from '../mock/localJudge';
-import { saveReport } from '../utils/sessionStore';
+import {
+  createAnalysisSession,
+  getAnalysisSession,
+  saveHealthData,
+  updateSessionCategory,
+  updateSessionTarget,
+  evaluateSession,
+} from '../api/analysisApi';
+import { isHealthDataAlreadyExistsError } from '../api/errors';
+import {
+  HEALTH_DATA_CATALOG_BY_NAME,
+  SERVICE_ACTION_OPTIONS,
+  UNKNOWN_HEALTH_DATA_ITEM_NOTICE,
+} from '../constants/analysisOptions';
+import { buildTargetFromUsers } from '../utils/analysisValidation';
 import styles from './InputPage.module.css';
-
-// tags의 그룹 코드 → HealthDataItemInput.data_type 값 매핑
-// (db_구축_설계서.md gate_matrix.data_type 은 라이프스타일/생체지표 2종 enum이며,
-//  민감정보(S)는 설계서 결정에 따라 생체지표에 포함시키되 is_sensitive=true로 구분한다.
-//  행동데이터(D)는 GATE 판정과 무관하므로 별도 라벨로 보낸다.)
-const HEALTH_DATA_TYPE = {
-  L: '라이프스타일',
-  B: '생체지표',
-  S: '생체지표',
-  D: '행동데이터',
-};
-const IS_SENSITIVE_GROUP = new Set(['S']);
 
 const TITLES = [
   '서비스를 설명해주세요',
@@ -89,12 +90,23 @@ const FORM_OPTS = [
   { name: '웹 서비스', sub: '브라우저 기반' },
   { name: '웨어러블 기기', sub: '하드웨어 기반' },
 ];
-const PURPOSE_OPTS = [
-  { name: '단순 기록·저장', sub: '기록만 보여주기' },
-  { name: '비교·추이 분석', sub: '평균 비교, 추이 시각화' },
-  { name: '위험 알림', sub: '정상 범위 이탈 시 경고', warn: true },
-  { name: '수치 예측·진단', sub: '미래 예측 또는 상태 진단', warn: true },
-];
+// 활용 목적 = service_actions. 라벨/경고 여부는 공통 상수(SERVICE_ACTION_OPTIONS)를 따르고,
+// 서버에는 라벨이 아니라 value(record/visualize_trend/alert/predict)를 보낸다.
+const PURPOSE_SUBS = {
+  record: '기록만 보여주기',
+  visualize_trend: '평균 비교, 추이 시각화',
+  alert: '정상 범위 이탈 시 경고',
+  predict: '미래 예측 또는 상태 진단',
+};
+const PURPOSE_OPTS = SERVICE_ACTION_OPTIONS.map((opt) => ({
+  name: opt.label,
+  value: opt.value,
+  sub: PURPOSE_SUBS[opt.value] ?? '',
+  warn: opt.hasGateWarning,
+}));
+
+// 공통 카탈로그의 group명 → InputPage 데이터 태그 코드 (복원용 역매핑)
+const GROUP_TO_CODE = { lifestyle: 'L', biometric: 'B', sensitive: 'S', behavior: 'D' };
 
 const CAT1_OPTS = ['수면', '정신건강', '운동', '식단', '만성질환', '여성건강', '유전자', '미용'];
 const CAT2_OPTS = ['정보제공', '데이터기록관리', '매칭연결', '개입치료'];
@@ -124,7 +136,17 @@ function toggleMultiSet(setObj, key) {
 
 export default function InputPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // /input?session=... 로 들어오면 기존 세션을 이어서 편집(뒤로가기/새로고침/재검진 대응)
+  const existingSessionId = searchParams.get('session');
+
   const [step, setStep] = useState(1);
+
+  // 진행 중인 세션 id — POST 성공 후 채워지거나, 편집 진입 시 URL에서 복원
+  const [sessionId, setSessionId] = useState(existingSessionId || null);
+  // 이 세션에 health-data가 이미 등록돼 있는지 → POST/PATCH 분기 판별
+  const [healthDataExists, setHealthDataExists] = useState(false);
+  const [restoring, setRestoring] = useState(Boolean(existingSessionId));
 
   // STEP 1
   const [svcName, setSvcName] = useState('');
@@ -153,6 +175,70 @@ export default function InputPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // ── 편집 진입 시 GET으로 기존 값 복원 (뒤로가기/새로고침/재검진 대응) ──
+  useEffect(() => {
+    if (!existingSessionId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const detail = await getAnalysisSession(existingSessionId);
+        if (cancelled || !detail) return;
+
+        setSvcName(detail.service_name || '');
+        setDesc(detail.service_description || '');
+        if (detail.category_1) setCat1(detail.category_1);
+        if (detail.category_2) setCat2(detail.category_2);
+
+        // target 복원 (직접 수정된 값으로 취급)
+        if (detail.target) {
+          setTargetField(detail.target);
+          setTargetEdited(true);
+        }
+
+        // target_users → 타겟 태그(AGE/PERSONA) 복원
+        const restoredTags = {};
+        (detail.target_users || []).forEach((label) => {
+          restoredTags[label] = AGE_TAGS.includes(label) ? 'AGE' : 'PERSONA';
+        });
+
+        // health_data_items → 데이터 태그(L/B/S/D) + 기타 복원
+        const restoredEtc = [];
+        (detail.health_data_items || []).forEach((item) => {
+          const catalog = HEALTH_DATA_CATALOG_BY_NAME[item.name];
+          if (catalog) {
+            restoredTags[item.name] = GROUP_TO_CODE[catalog.group] ?? 'L';
+          } else {
+            restoredEtc.push(item.name);
+          }
+        });
+        setTags(restoredTags);
+        setEtc(restoredEtc);
+
+        const items = detail.health_data_items || [];
+        if (items.length) {
+          setHealthDataExists(true); // 이미 등록됨 → 이후 저장은 PATCH
+          const restoredSource = items[0]?.source;
+          if (restoredSource) setMethod(new Set([restoredSource]));
+        }
+
+        // service_actions(value) → purpose 인덱스 역매핑
+        const actionValue = detail.service_actions?.[0];
+        if (actionValue) {
+          const idx = PURPOSE_OPTS.findIndex((o) => o.value === actionValue);
+          if (idx >= 0) setPurpose(idx);
+        }
+      } catch (err) {
+        if (!cancelled) setSubmitError(err.message || '기존 세션을 불러오지 못했어요.');
+      } finally {
+        if (!cancelled) setRestoring(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingSessionId]);
+
   const warnShort = desc.trim().length > 0 && desc.trim().length < 10;
   const cat1OutOfList = cat1Manual.length > 0 && !CAT1_OPTS.includes(cat1Manual);
   const cat2OutOfList = cat2Manual.length > 0 && !CAT2_OPTS.includes(cat2Manual);
@@ -162,7 +248,8 @@ export default function InputPage() {
   const targetAuto = useMemo(() => {
     const ages = Object.entries(tags).filter(([, g]) => g === 'AGE').map(([l]) => l);
     const personas = Object.entries(tags).filter(([, g]) => g === 'PERSONA').map(([l]) => l);
-    return [...personas, ...ages].join(', ');
+    // 선택 태그를 콤마로 이어붙여 target(단일 문자열, 매칭용) 구성 — 공통 유틸 사용
+    return buildTargetFromUsers([...personas, ...ages]);
   }, [tags]);
 
   const effectiveTarget = targetEdited ? targetField : targetAuto;
@@ -225,22 +312,34 @@ export default function InputPage() {
       ...Object.entries(tags).filter(([, g]) => g === 'AGE').map(([l]) => l),
     ];
 
-    const healthDataItems = [
-      ...Object.entries(tags)
-        .filter(([, g]) => HEALTH_DATA_TYPE[g])
-        .map(([label, g]) => ({
+    const source = method.size > 0 ? [...method][0] : 'user_input';
+
+    // 데이터 태그(L/B/S/D)만 검진 데이터로 — 공통 카탈로그에서 item_code·data_type·is_sensitive를 가져온다.
+    // (이름으로 역조회하므로 백엔드가 요구하는 item_code가 항상 실린다 = privacy_score 정상 계산의 핵심)
+    const DATA_GROUPS = new Set(['L', 'B', 'S', 'D']);
+    const catalogItems = Object.entries(tags)
+      .filter(([, g]) => DATA_GROUPS.has(g))
+      .map(([label]) => {
+        const catalog = HEALTH_DATA_CATALOG_BY_NAME[label];
+        return {
           name: label,
-          data_type: HEALTH_DATA_TYPE[g],
-          source: method.size > 0 ? [...method][0] : 'user_input',
-          is_sensitive: IS_SENSITIVE_GROUP.has(g),
-        })),
-      ...etc.map((label) => ({
-        name: label,
-        data_type: '기타',
-        source: method.size > 0 ? [...method][0] : 'user_input',
-        is_sensitive: false,
-      })),
-    ];
+          data_type: catalog.data_type,
+          source,
+          is_sensitive: catalog.is_sensitive,
+          item_code: catalog.item_code,
+        };
+      });
+
+    // "기타 - 직접 입력" 항목: item_code 없음 → 백엔드 점수 계산에서 제외됨(에러 아님)
+    const etcItems = etc.map((label) => ({
+      name: label,
+      data_type: 'text',
+      source,
+      is_sensitive: false,
+      item_code: null,
+    }));
+
+    const healthDataItems = [...catalogItems, ...etcItems];
 
     const serviceTypeValue = form.has('none') ? null : [...form].map((i) => FORM_OPTS[i].name).join('·') || null;
 
@@ -254,18 +353,20 @@ export default function InputPage() {
       target: effectiveTarget || null,
     };
 
+    // 활용 목적 → service_actions (라벨 아님, value로 전송)
+    const purposeOpt = PURPOSE_OPTS[purpose];
     const healthDataPayload = healthDataItems.length
       ? {
           health_data_items: healthDataItems,
-          processing_purpose: [PURPOSE_OPTS[purpose].name],
-          _purposeIndex: purpose, // 로컬 판정용 보조 필드 — 실제 API 요청 시에는 제거하고 보낼 것
+          processing_purpose: [purposeOpt.name],
+          service_actions: [purposeOpt.value],
         }
       : null;
 
     return { sessionPayload, healthDataPayload };
   }
 
-  function submit() {
+  async function submit() {
     if (!svcName.trim()) {
       setWarnName(true);
       goStep(1);
@@ -286,16 +387,65 @@ export default function InputPage() {
     setSubmitting(true);
     try {
       const { sessionPayload, healthDataPayload } = buildAnalysisPayload(trimmed);
-      const report = runLocalJudge(sessionPayload, healthDataPayload);
-      const sessionId = crypto.randomUUID();
-      report.session.session_id = sessionId;
-      saveReport(sessionId, report);
-      navigate(`/report/${sessionId}`);
+      const sid = await submitToBackend(sessionPayload, healthDataPayload);
+      navigate(`/report/${sid}`);
     } catch (err) {
       setSubmitError(err.message || '분석 처리 중 알 수 없는 오류가 발생했어요.');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /**
+   * 백엔드 실연동 흐름 (역할분담 v2, B 담당):
+   *   1) 세션 확보 — 신규면 POST /analysis-sessions, 편집이면 기존 session_id 재사용
+   *   2) target 저장 — PATCH /category 에 target만 (category_1/2는 A가 STEP2에서 저장)
+   *   3) 검진 데이터 저장 — 최초 POST / 이후 PATCH 자동 분기(409 방어 포함)
+   *   4) evaluate 실행 → 리포트로 이동
+   * @returns {Promise<string>} sessionId
+   */
+  async function submitToBackend(sessionPayload, healthDataPayload) {
+    let sid = sessionId;
+
+    // 1) 세션 확보
+    if (!sid) {
+      const session = await createAnalysisSession(sessionPayload);
+      sid = session?.session_id;
+      if (!sid) throw new Error('서버 응답에 session_id가 없어요.');
+      setSessionId(sid);
+    } else {
+      // 편집 중이면 카테고리도 갱신될 수 있어 반영 (category_1/2만)
+      if (sessionPayload.category_1 || sessionPayload.category_2) {
+        await updateSessionCategory(sid, {
+          category_1: sessionPayload.category_1,
+          category_2: sessionPayload.category_2,
+        });
+      }
+    }
+
+    // 2) target 저장 (PATCH /category, target만)
+    if (sessionPayload.target) {
+      await updateSessionTarget(sid, sessionPayload.target);
+    }
+
+    // 3) 검진 데이터 저장 (POST/PATCH 분기 + 409 방어)
+    if (healthDataPayload?.health_data_items?.length) {
+      try {
+        await saveHealthData(sid, healthDataPayload, { exists: healthDataExists });
+      } catch (err) {
+        // exists 판별이 어긋나 이미 등록돼 있으면(409) PATCH로 재시도
+        if (isHealthDataAlreadyExistsError(err)) {
+          await saveHealthData(sid, healthDataPayload, { exists: true });
+        } else {
+          throw err;
+        }
+      }
+      setHealthDataExists(true);
+    }
+
+    // 4) evaluate 실행
+    await evaluateSession(sid);
+    return sid;
   }
 
   return (
@@ -318,6 +468,13 @@ export default function InputPage() {
 
         <div className={styles.content}>
           <div className={styles['form-inner']}>
+
+            {restoring && (
+              <div className={styles.notice} style={{ marginBottom: 16 }}>
+                <i className="ti ti-loader"></i>
+                <span>기존 입력 내용을 불러오는 중이에요...</span>
+              </div>
+            )}
 
             {/* 스텝 헤더 */}
             <div className={styles['step-header']}>
@@ -644,7 +801,7 @@ export default function InputPage() {
                       </div>
                       <div className={styles.notice}>
                         <i className="ti ti-info-circle"></i>
-                        <span>직접 입력한 항목은 위험도 자동 평가에서 제외될 수 있습니다.</span>
+                        <span>{UNKNOWN_HEALTH_DATA_ITEM_NOTICE}</span>
                       </div>
                     </div>
                     <div className={styles.notice}>
