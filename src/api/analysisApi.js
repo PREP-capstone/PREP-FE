@@ -1,7 +1,14 @@
-// PREP-BE(FastAPI, https://api.prepwell.shop) 실제 openapi.json(2026-08-24 확인) 기준 API 함수 모음.
-// 모든 성공 응답은 { isSuccess, code, message, result } 형태로 감싸져 있어 unwrap()으로 result만 꺼낸다.
-
 import { apiClient, unwrap } from './client';
+import {
+  assertNoValidationErrors,
+  hasRegisteredHealthData,
+  validateCategoryPayload,
+  validateHealthDataPayload,
+} from '../utils/analysisValidation';
+
+function sessionPath(sessionId, suffix = '') {
+  return `/api/v1/analysis-sessions/${encodeURIComponent(sessionId)}${suffix}`;
+}
 
 /** GET /api/v1/health */
 export async function checkHealth() {
@@ -20,7 +27,7 @@ export async function createAnalysisSession(payload) {
 
 /** GET /api/v1/analysis-sessions/{sessionId} → AnalysisSessionDetail (세션 입력값 원본) */
 export async function getAnalysisSession(sessionId) {
-  const res = await apiClient.get(`/api/v1/analysis-sessions/${sessionId}`);
+  const res = await apiClient.get(sessionPath(sessionId));
   return unwrap(res);
 }
 
@@ -30,20 +37,35 @@ export async function getAnalysisSession(sessionId) {
  * → { session_id, health_data_count }
  */
 export async function createHealthData(sessionId, payload) {
-  const res = await apiClient.post(`/api/v1/analysis-sessions/${sessionId}/health-data`, payload);
+  assertNoValidationErrors(validateHealthDataPayload(payload));
+  const res = await apiClient.post(sessionPath(sessionId, '/health-data'), payload);
   return unwrap(res);
 }
 
 /** PATCH /api/v1/analysis-sessions/{sessionId}/health-data — 동일 payload, 갱신용 */
 export async function updateHealthData(sessionId, payload) {
-  const res = await apiClient.patch(`/api/v1/analysis-sessions/${sessionId}/health-data`, payload);
+  assertNoValidationErrors(validateHealthDataPayload(payload));
+  const res = await apiClient.patch(sessionPath(sessionId, '/health-data'), payload);
   return unwrap(res);
+}
+
+export async function saveHealthData(sessionId, payload, { exists = false } = {}) {
+  return exists ? updateHealthData(sessionId, payload) : createHealthData(sessionId, payload);
 }
 
 /** PATCH /api/v1/analysis-sessions/{sessionId}/category → 갱신된 AnalysisSessionDetail */
 export async function updateCategory(sessionId, payload) {
-  const res = await apiClient.patch(`/api/v1/analysis-sessions/${sessionId}/category`, payload);
+  assertNoValidationErrors(validateCategoryPayload(payload));
+  const res = await apiClient.patch(sessionPath(sessionId, '/category'), payload);
   return unwrap(res);
+}
+
+export async function updateSessionCategory(sessionId, { category_1, category_2 }) {
+  return updateCategory(sessionId, { category_1, category_2 });
+}
+
+export async function updateSessionTarget(sessionId, target) {
+  return updateCategory(sessionId, { target });
 }
 
 /** POST /api/v1/category-classifier/predict — { service_description } → { category_1, category_1_confidence, category_2, category_2_confidence } */
@@ -51,6 +73,8 @@ export async function classifyCategory(serviceDescription) {
   const res = await apiClient.post('/api/v1/category-classifier/predict', { service_description: serviceDescription });
   return unwrap(res);
 }
+
+export const predictCategory = classifyCategory;
 
 /**
  * POST /api/v1/analysis/evaluate — { session_id } 하나만 받아 GATE·규제·데이터·시장·BM 판정을 전부 실행.
@@ -67,6 +91,8 @@ export async function evaluateSession(sessionId) {
   return unwrap(res);
 }
 
+export const evaluateAnalysis = evaluateSession;
+
 /**
  * 검진 폼 제출 전체 흐름: 세션 생성 → (수집데이터 있으면) 등록 → 평가 실행.
  * sessionPayload / healthDataPayload 구성은 InputPage.jsx의 buildAnalysisPayload() 참고.
@@ -79,9 +105,11 @@ export async function submitIdea({ sessionPayload, healthDataPayload }) {
   }
 
   if (healthDataPayload?.health_data_items?.length) {
-    await createHealthData(sessionId, healthDataPayload);
+    await saveHealthData(sessionId, healthDataPayload, { exists: false });
   }
 
   const report = await evaluateSession(sessionId);
   return { sessionId, report };
 }
+
+export { hasRegisteredHealthData };

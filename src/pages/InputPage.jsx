@@ -96,7 +96,7 @@ const PURPOSE_OPTS = [
   { name: '수치 예측·진단', sub: '미래 예측 또는 상태 진단', warn: true },
 ];
 
-const CAT1_OPTS = ['수면', '정신건강', '운동', '식단', '만성질환', '여성건강', '미용'];
+const CAT1_OPTS = ['수면', '정신건강', '운동', '식단', '만성질환', '여성건강', '유전자', '미용'];
 const CAT2_OPTS = ['정보제공', '데이터기록관리', '매칭연결', '개입치료'];
 const CAT1_RECO = '수면';
 const CAT2_RECO = '정보제공';
