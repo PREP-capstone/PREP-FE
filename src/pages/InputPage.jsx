@@ -19,6 +19,7 @@ import {
   UNKNOWN_HEALTH_DATA_ITEM_NOTICE,
 } from '../constants/analysisOptions';
 import { buildTargetFromUsers, isValidCategory1, isValidCategory2 } from '../utils/analysisValidation';
+import { clearReportCache } from '../utils/reportCache';
 import styles from './InputPage.module.css';
 
 const TITLES = [
@@ -176,7 +177,7 @@ export default function InputPage() {
   const [targetEdited, setTargetEdited] = useState(false);
 
   // STEP 4 — 수집방법 / 형태 / 목적
-  const [method, setMethod] = useState(new Set());
+  const [method, setMethod] = useState(new Set(['user_input']));
   const [form, setForm] = useState(new Set(['none']));
   const [purpose, setPurpose] = useState(0);
 
@@ -439,6 +440,11 @@ export default function InputPage() {
     setSubmitting(true);
     try {
       const { sessionPayload, healthDataPayload } = buildAnalysisPayload(trimmed);
+      if (!healthDataPayload?.health_data_items?.length) {
+        setSubmitError('검진을 시작하려면 수집할 데이터를 1개 이상 선택해주세요.');
+        goStep(3);
+        return;
+      }
       const sid = await submitToBackend(sessionPayload, healthDataPayload);
       navigate(`/report/${sid}`);
     } catch (err) {
@@ -498,6 +504,7 @@ export default function InputPage() {
       setHealthDataExists(true);
     }
 
+    clearReportCache(sid);
     return sid;
   }
 
@@ -515,7 +522,6 @@ export default function InputPage() {
           </div>
           <div className={styles['topbar-right']}>
             <div className={styles['icon-btn']}><i className="ti ti-bell"></i></div>
-            <div className={styles.avatar}>김</div>
           </div>
         </div>
 
@@ -606,11 +612,6 @@ export default function InputPage() {
                   <div></div>
                   <button className={styles['btn-next']} onClick={goNextFromStep1}>
                     다음 단계 <i className="ti ti-arrow-right"></i>
-                  </button>
-                </div>
-                <div className={styles['skip-row']}>
-                  <button className={styles['skip-btn']} onClick={() => submit()} disabled={submitting}>
-                    {submitting ? '검진 요청 중...' : '선택 항목 건너뛰고 바로 검진 시작하기'}
                   </button>
                 </div>
                 {submitError && (
@@ -886,7 +887,7 @@ export default function InputPage() {
                     </div>
                     <div className={styles.notice}>
                       <i className="ti ti-info-circle"></i>
-                      <span>수집 데이터를 선택하지 않으면 "추가 정보 입력 시 더 정확한 진단이 가능합니다"라고 표시되며, 서비스 설명만으로 진단이 진행됩니다.</span>
+                      <span>검진을 시작하려면 수집할 데이터가 1개 이상 필요합니다. 직접 입력한 기타 항목은 점수 계산에서 제외될 수 있어요.</span>
                     </div>
                   </div>
                 </div>
@@ -904,7 +905,7 @@ export default function InputPage() {
                 <div className={styles.section}>
                   <div className={styles['sec-head']}>
                     <div className={styles['sec-num']}>6</div>
-                    <h2>데이터 수집 방법 <span className={styles['req-badge']}>필수</span> <span className={styles.opt}>복수 선택 가능</span></h2>
+                    <h2>데이터 수집 방법 <span className={styles['req-badge']}>필수</span></h2>
                   </div>
                   <div className={styles.card}>
                     <div className={styles['radio-grid']}>
@@ -912,7 +913,7 @@ export default function InputPage() {
                         <div
                           key={opt.value}
                           className={cx(styles, 'rc', method.has(opt.value) && 'on')}
-                          onClick={() => setMethod((s) => toggleMultiSet(s, opt.value))}
+                          onClick={() => setMethod(new Set([opt.value]))}
                         >
                           <div className={styles['rc-dot']}></div>
                           <div><div className={styles['rc-name']}>{opt.name}</div><div className={styles['rc-sub']}>{opt.sub}</div></div>

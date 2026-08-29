@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { cx } from '../utils/cx';
 import styles from './Sidebar.module.css';
 
-// active: 'main' | 'input'
+// active: 'main' | 'input' | 'help'
 export default function Sidebar({ active }) {
   return (
     <div className={styles.sidebar}>
@@ -31,9 +31,9 @@ export default function Sidebar({ active }) {
       </div>
 
       <div className={styles['sidebar-bottom']}>
-        <a className={styles['nav-item']} href="#!"><i className="ti ti-user"></i>마이페이지</a>
-        <a className={styles['nav-item']} href="#!"><i className="ti ti-help"></i>도움말</a>
-        <a className={styles['nav-item']} href="#!"><i className="ti ti-logout"></i>로그아웃</a>
+        <Link to="/help" className={cx(styles, 'nav-item', active === 'help' && 'active')}>
+          <i className="ti ti-help"></i>도움말
+        </Link>
       </div>
     </div>
   );

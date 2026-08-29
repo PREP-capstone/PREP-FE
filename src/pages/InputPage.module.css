@@ -2,61 +2,61 @@
 
 /* ── 메인 ── */
 .main { flex: 1; display: flex; flex-direction: column; }
-.topbar { min-height: 64px; padding: 14px 34px; background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.topbar { min-height: 72px; padding: 16px 44px; background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
-.back-btn { display: flex; align-items: center; gap: 6px; min-height: 36px; font-size: 13px; color: #666; border: 1px solid #e8e8e8; background: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+.back-btn { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; color: #666; border: 1px solid #e8e8e8; background: #fff; padding: 10px 18px; border-radius: 9px; cursor: pointer; font-family: inherit; }
 .back-btn i { font-size: 16px; }
-.topbar-title { font-size: 14px; font-weight: 500; color: #111; }
+.topbar-title { font-size: 17px; font-weight: 700; color: #111; }
 .topbar-right { display: flex; align-items: center; gap: 8px; }
 .icon-btn { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #666; border: 1px solid #e8e8e8; background: #fff; }
 .icon-btn i { font-size: 17px; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; background: #111; color: #fff; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; }
 
 /* ── 콘텐츠 ── */
-.content { flex: 1; overflow-y: auto; padding: 48px 0 88px; }
-.form-inner { max-width: 760px; margin: 0 auto; padding: 0 28px; }
+.content { flex: 1; overflow-y: auto; padding: 54px 0 96px; }
+.form-inner { max-width: 1040px; margin: 0 auto; padding: 0 40px; }
 
 /* ── 스텝 헤더 ── */
-.step-header { text-align: center; margin-bottom: 32px; }
-.step-header h1 { font-size: 28px; font-weight: 800; color: #111; margin-bottom: 8px; }
-.step-header p { font-size: 14px; color: #555; }
+.step-header { text-align: center; margin-bottom: 40px; }
+.step-header h1 { font-size: 36px; font-weight: 800; color: #111; margin-bottom: 10px; }
+.step-header p { font-size: 17px; color: #555; }
 .progress { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
 .prog-bar { width: 34px; height: 4px; border-radius: 2px; background: #e8e8e8; transition: background .25s; }
 .prog-bar.active { background: #111; }
 .prog-bar.done { background: #888; }
 
 /* ── 섹션 ── */
-.section { margin-bottom: 20px; }
-.sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.sec-num { width: 20px; height: 20px; background: #111; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.sec-head h2 { font-size: 14px; font-weight: 500; color: #111; }
-.opt { font-size: 11px; color: #777; font-weight: 400; margin-left: 2px; }
+.section { margin-bottom: 26px; }
+.sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.sec-num { width: 26px; height: 26px; background: #111; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sec-head h2 { font-size: 18px; font-weight: 700; color: #111; }
+.opt { font-size: 13px; color: #777; font-weight: 400; margin-left: 4px; }
 .req-badge { font-size: 10px; color: #fff; background: #c0392b; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 4px; letter-spacing: .2px; }
 .opt-badge { font-size: 10px; color: #666; background: #eee; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 4px; letter-spacing: .2px; }
 
 /* ── 카드 ── */
-.card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 24px; }
+.card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 34px; }
 
 /* ── textarea / input ── */
-.card textarea { width: 100%; height: 108px; padding: 12px 14px; border: 1px solid #e8e8e8; border-radius: 8px; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; color: #111; resize: none; outline: none; background: #fafafa; line-height: 1.7; transition: border-color .15s; }
+.card textarea { width: 100%; min-height: 180px; padding: 18px 20px; border: 1px solid #e8e8e8; border-radius: 10px; font-family: 'Noto Sans KR', sans-serif; font-size: 16px; color: #111; resize: vertical; outline: none; background: #fafafa; line-height: 1.75; transition: border-color .15s; }
 .card textarea:focus { border-color: #555; background: #fff; }
 .card textarea::placeholder { color: #777; }
-.card input[type="text"] { width: 100%; padding: 10px 13px; border: 1px solid #e8e8e8; border-radius: 8px; font-size: 13px; color: #111; outline: none; background: #fafafa; transition: border-color .15s; }
+.card input[type="text"] { width: 100%; min-height: 50px; padding: 14px 17px; border: 1px solid #e8e8e8; border-radius: 10px; font-size: 16px; color: #111; outline: none; background: #fafafa; transition: border-color .15s; }
 .card input[type="text"]:focus { border-color: #555; background: #fff; }
 .card input[type="text"]::placeholder { color: #777; }
 
 /* ── 데이터 태그 ── */
-.group { margin-bottom: 16px; }
+.group { margin-bottom: 24px; }
 .group:last-child { margin-bottom: 0; }
-.group-name { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #666; letter-spacing: .7px; text-transform: uppercase; margin-bottom: 7px; }
+.group-name { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: #666; letter-spacing: .7px; text-transform: uppercase; margin-bottom: 12px; }
 .group-name .sens-tag { text-transform: none; font-weight: 500; color: #b5471f; font-size: 10px; letter-spacing: 0; margin-left: 2px; }
 .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 .dot-l { background: #bbb; }
 .dot-m { background: #888; }
 .dot-h { background: #c0392b; }
-.tags { display: flex; flex-wrap: wrap; gap: 8px; }
-.tag { min-height: 34px; padding: 8px 14px; border-radius: 18px; border: 1px solid #e8e8e8; background: #fff; font-size: 13px; color: #666; cursor: pointer; font-family: inherit; transition: all .1s; display: flex; align-items: center; gap: 6px; }
-.tag i { font-size: 14px; }
+.tags { display: flex; flex-wrap: wrap; gap: 10px; }
+.tag { min-height: 44px; padding: 11px 18px; border-radius: 22px; border: 1px solid #e8e8e8; background: #fff; font-size: 15px; color: #666; cursor: pointer; font-family: inherit; transition: all .1s; display: flex; align-items: center; gap: 8px; }
+.tag i { font-size: 17px; }
 .tag:hover { border-color: #666; color: #555; }
 .tag.on { background: #111; border-color: #111; color: #fff; }
 .tag.sensitive.on { background: #b5471f; border-color: #b5471f; }
@@ -68,22 +68,22 @@
 .add-btn i { font-size: 14px; }
 
 /* ── 라디오 카드 ── */
-.radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-.rc { min-height: 58px; padding: 13px 15px; border: 1px solid #e8e8e8; border-radius: 10px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; background: #fff; transition: border-color .1s; }
+.radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.rc { min-height: 76px; padding: 18px 20px; border: 1px solid #e8e8e8; border-radius: 10px; cursor: pointer; display: flex; align-items: flex-start; gap: 14px; background: #fff; transition: border-color .1s; }
 .rc:hover { border-color: #666; }
 .rc.on { border-color: #111; background: #fafafa; }
 .rc-dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #ddd; flex-shrink: 0; margin-top: 2px; position: relative; transition: all .1s; }
 .rc.on .rc-dot { border-color: #111; background: #111; }
 .rc.on .rc-dot::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #fff; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.rc-name { font-size: 13.5px; font-weight: 600; color: #111; margin-bottom: 2px; }
-.rc-sub { font-size: 11.5px; color: #777; line-height: 1.45; }
+.rc-name { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 4px; }
+.rc-sub { font-size: 13.5px; color: #777; line-height: 1.5; }
 
 /* ── 네비 버튼 ── */
 .nav-btns { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; }
 .btn-prev { display: flex; align-items: center; gap: 6px; min-height: 40px; font-size: 14px; color: #666; background: transparent; border: none; cursor: pointer; font-family: inherit; padding: 8px 0; }
 .btn-prev:hover { color: #555; }
 .btn-prev i { font-size: 16px; }
-.btn-next { display: flex; align-items: center; gap: 8px; min-height: 44px; background: #111; color: #fff; border: none; padding: 12px 28px; border-radius: 12px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity .12s; }
+.btn-next { display: flex; align-items: center; gap: 8px; min-height: 52px; background: #111; color: #fff; border: none; padding: 14px 34px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .12s; }
 .btn-next:hover { opacity: .88; }
 .btn-next i { font-size: 17px; }
 
@@ -92,16 +92,11 @@
 .example-label { font-size: 11px; color: #666; margin-bottom: 7px; display: flex; align-items: center; gap: 5px; }
 .example-label i { font-size: 13px; }
 .example-list { display: flex; flex-direction: column; gap: 6px; }
-.example-item { text-align: left; padding: 12px 14px; border: 1px solid #f0f0f0; border-radius: 10px; background: #fafafa; font-size: 13px; color: #555; cursor: pointer; font-family: inherit; transition: all .12s; line-height: 1.6; }
+.example-item { text-align: left; padding: 15px 17px; border: 1px solid #f0f0f0; border-radius: 10px; background: #fafafa; font-size: 15px; color: #555; cursor: pointer; font-family: inherit; transition: all .12s; line-height: 1.7; }
 .example-item:hover { border-color: #777; color: #666; background: #f5f5f5; }
 
-/* ── 건너뛰기 버튼 ── */
-.skip-row { margin-top: 14px; text-align: center; }
-.skip-btn { min-height: 36px; font-size: 13px; color: #666; background: transparent; border: none; cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.skip-btn:hover { color: #666; }
-
 /* ── 미입력 안내 ── */
-.notice { display: flex; align-items: flex-start; gap: 7px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 11.5px; color: #666; line-height: 1.6; }
+.notice { display: flex; align-items: flex-start; gap: 8px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; padding: 13px 15px; margin-top: 14px; font-size: 14px; color: #666; line-height: 1.65; }
 .notice i { font-size: 14px; color: #777; flex-shrink: 0; margin-top: 1px; }
 .notice.warn { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
 .notice.warn i { color: #c2620f; }
@@ -112,10 +107,10 @@
 .warn-box i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 
 /* ── 카테고리 추천 안내 ── */
-.cat-reco { display: flex; align-items: center; gap: 8px; background: #f0f6fc; border: 1px solid #c9dcef; border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; font-size: 12px; color: #1c4e80; }
+.cat-reco { display: flex; align-items: center; gap: 9px; background: #f0f6fc; border: 1px solid #c9dcef; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; font-size: 14px; color: #1c4e80; }
 .cat-reco i { font-size: 15px; }
 .pill-grid { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 12px; }
-.pill { min-height: 38px; padding: 9px 16px; border-radius: 10px; border: 1px solid #e8e8e8; background: #fff; font-size: 13.5px; color: #444; cursor: pointer; font-family: inherit; transition: all .1s; }
+.pill { min-height: 46px; padding: 12px 20px; border-radius: 10px; border: 1px solid #e8e8e8; background: #fff; font-size: 15.5px; color: #444; cursor: pointer; font-family: inherit; transition: all .1s; }
 .pill:hover { border-color: #666; }
 .pill.on { background: #111; border-color: #111; color: #fff; }
 .pill.reco::after { content: ' · 추천'; font-size: 10px; opacity: .65; }

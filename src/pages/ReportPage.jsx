@@ -37,6 +37,7 @@ function maxLevel(...levels) {
 export default function ReportPage({ data }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('r');
+  const [isPrintMode, setIsPrintMode] = useState(false);
 
   const {
     session = {},
@@ -65,6 +66,14 @@ export default function ReportPage({ data }) {
     setTab(id);
   }
 
+  function handleSavePdf() {
+    setIsPrintMode(true);
+    window.setTimeout(() => {
+      window.print();
+      setIsPrintMode(false);
+    }, 0);
+  }
+
   return (
     <div className={styles.page}>
       {/* 상단 네비 */}
@@ -78,6 +87,9 @@ export default function ReportPage({ data }) {
           <span className={styles['page-title']}>검진 결과 리포트</span>
         </div>
         <div className={styles['nav-right']}>
+          <button className={styles['nav-btn']} onClick={handleSavePdf}>
+            <i className="ti ti-download"></i>PDF 저장
+          </button>
           <button className={styles['nav-btn']} onClick={() => navigate('/input')}>
             <i className="ti ti-arrow-left"></i>검진 다시 하기
           </button>
@@ -222,8 +234,9 @@ export default function ReportPage({ data }) {
           </div>
 
           {/* §01 규제 위험도 */}
-          {tab === 'r' && (
-            <div>
+          {(tab === 'r' || isPrintMode) && (
+            <div className={styles['tab-panel']}>
+              <div className={styles['print-tab-title']}>규제 위험도</div>
               <div className={styles['acq-overview']} style={{ marginBottom: 16 }}>
                 <div className={cx(styles, 'acq-card', toLevel(reg.regulatory_grade))}>
                   <div className={styles['acq-name']}>의료행위표현</div>
@@ -249,12 +262,17 @@ export default function ReportPage({ data }) {
               )}
 
               {(reg.matched_rules?.length ?? 0) > 0 && (
-                <div className={styles.grounds}>
+                <div className={styles['law-list']}>
                   {reg.matched_rules.map((r, i) => (
-                    <div key={i} className={styles.ground}>
-                      <div className={cx(styles, 'g-dot', 'high')}></div>
-                      {r.legal_basis?.document_id} {r.legal_basis?.article}
-                      {r.legal_basis?.quote ? ` — "${r.legal_basis.quote}"` : ''}
+                    <div key={i} className={styles['law-card']}>
+                      <div className={styles['law-meta']}>
+                        <span>{r.legal_basis?.document_id ?? '근거 문서'}</span>
+                        {r.legal_basis?.article && <b>{r.legal_basis.article}</b>}
+                        {r.exact_phrase_match && <em>직접 문구 매칭</em>}
+                      </div>
+                      {r.legal_basis?.quote && (
+                        <div className={styles['law-quote']}>{r.legal_basis.quote}</div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -291,8 +309,9 @@ export default function ReportPage({ data }) {
           )}
 
           {/* §02 데이터 확보 가능성 */}
-          {tab === 'd' && !isFail && (
-            <div>
+          {(tab === 'd' || isPrintMode) && !isFail && (
+            <div className={styles['tab-panel']}>
+              <div className={styles['print-tab-title']}>데이터 확보</div>
               {dataFeas ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
@@ -376,8 +395,9 @@ export default function ReportPage({ data }) {
           )}
 
           {/* §03 시장 현실성 */}
-          {tab === 'm' && !isFail && (
-            <div>
+          {(tab === 'm' || isPrintMode) && !isFail && (
+            <div className={styles['tab-panel']}>
+              <div className={styles['print-tab-title']}>시장 현실성</div>
               {marketFeas ? (
                 <>
                   <div className={styles['mkt-overview']}>
@@ -418,8 +438,9 @@ export default function ReportPage({ data }) {
           )}
 
           {/* §04 수익 구조 */}
-          {tab === 'b' && !isFail && (
-            <div>
+          {(tab === 'b' || isPrintMode) && !isFail && (
+            <div className={styles['tab-panel']}>
+              <div className={styles['print-tab-title']}>수익 구조</div>
               {bm && bm.recommendations?.length ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>매칭 범위: {bm.match_level}</div>
