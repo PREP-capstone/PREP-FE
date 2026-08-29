@@ -11,10 +11,9 @@ export default function MainPage() {
 
       <div className={styles.main}>
         <div className={styles.topbar}>
-          <div className={styles['topbar-greeting']}>안녕하세요, <b>김지연</b>님</div>
+          <div className={styles['topbar-title']}>웰니스 창업 준비 플랫폼</div>
           <div className={styles['topbar-right']}>
             <div className={styles['icon-btn']}><i className="ti ti-bell"></i></div>
-            <div className={styles.avatar}>김</div>
           </div>
         </div>
 

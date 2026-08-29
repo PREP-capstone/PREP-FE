@@ -249,12 +249,17 @@ export default function ReportPage({ data }) {
               )}
 
               {(reg.matched_rules?.length ?? 0) > 0 && (
-                <div className={styles.grounds}>
+                <div className={styles['law-list']}>
                   {reg.matched_rules.map((r, i) => (
-                    <div key={i} className={styles.ground}>
-                      <div className={cx(styles, 'g-dot', 'high')}></div>
-                      {r.legal_basis?.document_id} {r.legal_basis?.article}
-                      {r.legal_basis?.quote ? ` — "${r.legal_basis.quote}"` : ''}
+                    <div key={i} className={styles['law-card']}>
+                      <div className={styles['law-meta']}>
+                        <span>{r.legal_basis?.document_id ?? '근거 문서'}</span>
+                        {r.legal_basis?.article && <b>{r.legal_basis.article}</b>}
+                        {r.exact_phrase_match && <em>직접 문구 매칭</em>}
+                      </div>
+                      {r.legal_basis?.quote && (
+                        <div className={styles['law-quote']}>{r.legal_basis.quote}</div>
+                      )}
                     </div>
                   ))}
                 </div>

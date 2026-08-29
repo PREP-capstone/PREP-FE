@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReportPage from './ReportPage';
 import { evaluateSession } from '../api/analysisApi';
+import { loadReportCache, saveReportCache } from '../utils/reportCache';
 import styles from './ReportPage.module.css';
 
 // /report/:sessionId
@@ -13,7 +14,14 @@ function loadEvaluateReport(sessionId) {
   const pending = pendingReports.get(sessionId);
   if (pending) return pending;
 
+  const cached = loadReportCache(sessionId);
+  if (cached) return Promise.resolve(cached);
+
   const promise = evaluateSession(sessionId)
+    .then((report) => {
+      saveReportCache(sessionId, report);
+      return report;
+    })
     .finally(() => {
       if (pendingReports.get(sessionId) === promise) {
         pendingReports.delete(sessionId);

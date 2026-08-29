@@ -19,6 +19,7 @@ import {
   UNKNOWN_HEALTH_DATA_ITEM_NOTICE,
 } from '../constants/analysisOptions';
 import { buildTargetFromUsers, isValidCategory1, isValidCategory2 } from '../utils/analysisValidation';
+import { clearReportCache } from '../utils/reportCache';
 import styles from './InputPage.module.css';
 
 const TITLES = [
@@ -503,6 +504,7 @@ export default function InputPage() {
       setHealthDataExists(true);
     }
 
+    clearReportCache(sid);
     return sid;
   }
 
@@ -520,7 +522,6 @@ export default function InputPage() {
           </div>
           <div className={styles['topbar-right']}>
             <div className={styles['icon-btn']}><i className="ti ti-bell"></i></div>
-            <div className={styles.avatar}>김</div>
           </div>
         </div>
 
