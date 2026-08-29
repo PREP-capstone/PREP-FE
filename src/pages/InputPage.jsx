@@ -1,21 +1,24 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { cx } from '../utils/cx';
 import {
   createAnalysisSession,
   getAnalysisSession,
+  predictCategory,
   saveHealthData,
   updateSessionCategory,
   updateSessionTarget,
 } from '../api/analysisApi';
-import { isHealthDataAlreadyExistsError } from '../api/errors';
+import { API_ERROR_CODES, getApiErrorCode, isHealthDataAlreadyExistsError } from '../api/errors';
 import {
+  CATEGORY_1_OPTIONS,
+  CATEGORY_2_OPTIONS,
   HEALTH_DATA_CATALOG_BY_NAME,
   SERVICE_ACTION_OPTIONS,
   UNKNOWN_HEALTH_DATA_ITEM_NOTICE,
 } from '../constants/analysisOptions';
-import { buildTargetFromUsers } from '../utils/analysisValidation';
+import { buildTargetFromUsers, isValidCategory1, isValidCategory2 } from '../utils/analysisValidation';
 import styles from './InputPage.module.css';
 
 const TITLES = [
@@ -107,10 +110,10 @@ const PURPOSE_OPTS = SERVICE_ACTION_OPTIONS.map((opt) => ({
 // 공통 카탈로그의 group명 → InputPage 데이터 태그 코드 (복원용 역매핑)
 const GROUP_TO_CODE = { lifestyle: 'L', biometric: 'B', sensitive: 'S', behavior: 'D' };
 
-const CAT1_OPTS = ['수면', '정신건강', '운동', '식단', '만성질환', '여성건강', '유전자', '미용'];
-const CAT2_OPTS = ['정보제공', '데이터기록관리', '매칭연결', '개입치료'];
-const CAT1_RECO = '수면';
-const CAT2_RECO = '정보제공';
+// 카테고리 옵션은 공통 상수(constants/analysisOptions)를 사용한다. 추천값(reco)은
+// predict API 응답으로 채우므로 하드코딩하지 않는다.
+const CAT1_OPTS = CATEGORY_1_OPTIONS;
+const CAT2_OPTS = CATEGORY_2_OPTIONS;
 
 const EXAMPLES = [
   '수면 패턴을 분석해서 맞춤형 수면 루틴을 추천하는 모바일 앱을 만들고 싶어요. 직장인의 수면 부족 문제를 해결하는 게 목표예요.',
@@ -152,11 +155,18 @@ export default function InputPage() {
   const [desc, setDesc] = useState('');
   const [warnName, setWarnName] = useState(false);
 
-  // STEP 2 — 카테고리
-  const [cat1, setCat1] = useState(CAT1_RECO);
-  const [cat2, setCat2] = useState(CAT2_RECO);
+  // STEP 2 — 카테고리 (초기값 없음: predict 추천 또는 사용자 선택으로 채운다)
+  const [cat1, setCat1] = useState('');
+  const [cat2, setCat2] = useState('');
   const [cat1Manual, setCat1Manual] = useState('');
   const [cat2Manual, setCat2Manual] = useState('');
+
+  // predict 추천값(신뢰도 포함) — reco 하이라이트/신뢰도 표시에 사용
+  const [reco, setReco] = useState({ category_1: null, category_2: null, c1conf: null, c2conf: null });
+  const [predicting, setPredicting] = useState(false);
+  const [predictWarn, setPredictWarn] = useState(null);
+  const [lastPredictedDesc, setLastPredictedDesc] = useState('');
+  const latestPredictTextRef = useRef('');
 
   // STEP 3 — 타겟 & 데이터
   const [tags, setTags] = useState({}); // { label: group }
@@ -239,8 +249,8 @@ export default function InputPage() {
   }, [existingSessionId]);
 
   const warnShort = desc.trim().length > 0 && desc.trim().length < 10;
-  const cat1OutOfList = cat1Manual.length > 0 && !CAT1_OPTS.includes(cat1Manual);
-  const cat2OutOfList = cat2Manual.length > 0 && !CAT2_OPTS.includes(cat2Manual);
+  const cat1OutOfList = cat1Manual.length > 0 && !isValidCategory1(cat1Manual);
+  const cat2OutOfList = cat2Manual.length > 0 && !isValidCategory2(cat2Manual);
   const hasSensitive = Object.values(tags).includes('S');
   const purposeWarn = PURPOSE_OPTS[purpose].warn;
 
@@ -295,6 +305,42 @@ export default function InputPage() {
     setCat2(val);
   }
 
+  // 카테고리 추천 자동 호출 — service_description만 전달(POST /category-classifier/predict).
+  // 응답은 세션에 자동 반영되지 않으므로, 화면 추천값(reco)과 선택값(cat1/cat2)에만 반영하고
+  // 실제 저장은 submit()의 PATCH /category에서 이뤄진다.
+  async function runPredict(descText) {
+    const text = descText.trim();
+    if (!text) return;
+    latestPredictTextRef.current = text;
+    setPredicting(true);
+    setPredictWarn(null);
+    try {
+      const p = await predictCategory(text);
+      if (latestPredictTextRef.current !== text) return;
+      setReco({
+        category_1: p?.category_1 ?? null,
+        category_2: p?.category_2 ?? null,
+        c1conf: p?.category_1_confidence ?? null,
+        c2conf: p?.category_2_confidence ?? null,
+      });
+      setLastPredictedDesc(text);
+      // 사용자가 아직 안 골랐을 때만 추천값으로 프리셀렉트(선택/복원값은 덮어쓰지 않음)
+      if (p?.category_1) setCat1((prev) => prev || p.category_1);
+      if (p?.category_2) setCat2((prev) => prev || p.category_2);
+    } catch (err) {
+      if (latestPredictTextRef.current !== text) return;
+      // 모델 미가용(CATEGORY_MODEL_UNAVAILABLE) 등 — 화면은 계속 쓸 수 있게 안내만
+      const code = getApiErrorCode(err);
+      setPredictWarn(
+        code === API_ERROR_CODES.CATEGORY_MODEL_UNAVAILABLE
+          ? '카테고리 추천 모델을 지금 쓸 수 없어요. 아래에서 직접 선택해주세요.'
+          : '카테고리 자동 추천을 불러오지 못했어요. 아래에서 직접 선택해주세요.',
+      );
+    } finally {
+      if (latestPredictTextRef.current === text) setPredicting(false);
+    }
+  }
+
   function goNextFromStep1() {
     if (!svcName.trim()) {
       setWarnName(true);
@@ -303,6 +349,8 @@ export default function InputPage() {
     const v = desc.trim();
     if (v.length > 0 && v.length < 10) return;
     goStep(2);
+    // 카테고리 화면 진입 시 추천 자동 호출. 같은 설명으로 이미 성공한 추천만 재사용한다.
+    if (lastPredictedDesc !== v && v.length >= 10) runPredict(v);
   }
 
   function buildAnalysisPayload(trimmedDesc) {
@@ -585,16 +633,35 @@ export default function InputPage() {
                   <div className={styles.card}>
                     <div className={styles['cat-reco']}>
                       <i className="ti ti-sparkles"></i>
-                      <span>서비스 설명을 분석해서 아래 카테고리를 추천드렸어요. 그대로 사용하거나 다른 값으로 바꿀 수 있어요.</span>
+                      <span>
+                        {predicting
+                          ? '서비스 설명을 분석해 카테고리를 추천하고 있어요...'
+                          : '서비스 설명을 분석해서 아래 카테고리를 추천드렸어요. 그대로 사용하거나 다른 값으로 바꿀 수 있어요.'}
+                      </span>
                     </div>
 
+                    {predictWarn && (
+                      <div className={cx(styles, 'notice', 'warn')}>
+                        <i className="ti ti-alert-triangle"></i>
+                        <span>{predictWarn}</span>
+                      </div>
+                    )}
+
                     <div className={styles['cat-group']}>
-                      <div className={styles['cat-label']}>웰니스 분야 <span className={styles['req-badge']}>필수</span></div>
+                      <div className={styles['cat-label']}>
+                        웰니스 분야 <span className={styles['req-badge']}>필수</span>
+                        {reco.category_1 && (
+                          <span className={styles.opt} style={{ marginLeft: 6 }}>
+                            추천: {reco.category_1}
+                            {typeof reco.c1conf === 'number' ? ` (${Math.round(reco.c1conf * 100)}%)` : ''}
+                          </span>
+                        )}
+                      </div>
                       <div className={styles['pill-grid']}>
                         {CAT1_OPTS.map((opt) => (
                           <button
                             key={opt}
-                            className={cx(styles, 'pill', opt === CAT1_RECO && 'reco', opt === cat1 && 'on')}
+                            className={cx(styles, 'pill', opt === reco.category_1 && 'reco', opt === cat1 && 'on')}
                             onClick={() => onCat1Pill(opt)}
                           >
                             {opt}
@@ -617,12 +684,20 @@ export default function InputPage() {
                     </div>
 
                     <div className={styles['cat-group']}>
-                      <div className={styles['cat-label']}>기능 유형 <span className={styles['opt-badge']}>선택</span></div>
+                      <div className={styles['cat-label']}>
+                        기능 유형 <span className={styles['opt-badge']}>선택</span>
+                        {reco.category_2 && (
+                          <span className={styles.opt} style={{ marginLeft: 6 }}>
+                            추천: {reco.category_2}
+                            {typeof reco.c2conf === 'number' ? ` (${Math.round(reco.c2conf * 100)}%)` : ''}
+                          </span>
+                        )}
+                      </div>
                       <div className={styles['pill-grid']}>
                         {CAT2_OPTS.map((opt) => (
                           <button
                             key={opt}
-                            className={cx(styles, 'pill', opt === CAT2_RECO && 'reco', opt === cat2 && 'on')}
+                            className={cx(styles, 'pill', opt === reco.category_2 && 'reco', opt === cat2 && 'on')}
                             onClick={() => onCat2Pill(opt)}
                           >
                             {opt}
