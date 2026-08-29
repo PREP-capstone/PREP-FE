@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { cx } from '../utils/cx';
@@ -165,6 +165,8 @@ export default function InputPage() {
   const [reco, setReco] = useState({ category_1: null, category_2: null, c1conf: null, c2conf: null });
   const [predicting, setPredicting] = useState(false);
   const [predictWarn, setPredictWarn] = useState(null);
+  const [lastPredictedDesc, setLastPredictedDesc] = useState('');
+  const latestPredictTextRef = useRef('');
 
   // STEP 3 — 타겟 & 데이터
   const [tags, setTags] = useState({}); // { label: group }
@@ -309,20 +311,24 @@ export default function InputPage() {
   async function runPredict(descText) {
     const text = descText.trim();
     if (!text) return;
+    latestPredictTextRef.current = text;
     setPredicting(true);
     setPredictWarn(null);
     try {
       const p = await predictCategory(text);
+      if (latestPredictTextRef.current !== text) return;
       setReco({
         category_1: p?.category_1 ?? null,
         category_2: p?.category_2 ?? null,
         c1conf: p?.category_1_confidence ?? null,
         c2conf: p?.category_2_confidence ?? null,
       });
+      setLastPredictedDesc(text);
       // 사용자가 아직 안 골랐을 때만 추천값으로 프리셀렉트(선택/복원값은 덮어쓰지 않음)
-      if (!cat1 && p?.category_1) setCat1(p.category_1);
-      if (!cat2 && p?.category_2) setCat2(p.category_2);
+      if (p?.category_1) setCat1((prev) => prev || p.category_1);
+      if (p?.category_2) setCat2((prev) => prev || p.category_2);
     } catch (err) {
+      if (latestPredictTextRef.current !== text) return;
       // 모델 미가용(CATEGORY_MODEL_UNAVAILABLE) 등 — 화면은 계속 쓸 수 있게 안내만
       const code = getApiErrorCode(err);
       setPredictWarn(
@@ -331,7 +337,7 @@ export default function InputPage() {
           : '카테고리 자동 추천을 불러오지 못했어요. 아래에서 직접 선택해주세요.',
       );
     } finally {
-      setPredicting(false);
+      if (latestPredictTextRef.current === text) setPredicting(false);
     }
   }
 
@@ -343,8 +349,8 @@ export default function InputPage() {
     const v = desc.trim();
     if (v.length > 0 && v.length < 10) return;
     goStep(2);
-    // 카테고리 화면 진입 시 추천 자동 호출. 추천값이 아직 없을 때만(중복 호출 방지).
-    if (!reco.category_1 && v.length >= 10) runPredict(v);
+    // 카테고리 화면 진입 시 추천 자동 호출. 같은 설명으로 이미 성공한 추천만 재사용한다.
+    if (lastPredictedDesc !== v && v.length >= 10) runPredict(v);
   }
 
   function buildAnalysisPayload(trimmedDesc) {
