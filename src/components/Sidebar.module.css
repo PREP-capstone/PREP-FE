@@ -1,6 +1,6 @@
 .sidebar {
-  width: 248px;
-  min-width: 248px;
+  width: 280px;
+  min-width: 280px;
   background: #fff;
   border-right: 1px solid #e8e8e8;
   display: flex;
@@ -11,34 +11,34 @@
 }
 
 .logo {
-  padding: 28px 22px 22px;
+  padding: 30px 26px 24px;
   border-bottom: 1px solid #e8e8e8;
 }
-.logo-row { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; border-radius: 8px; }
+.logo-row { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; border-radius: 8px; }
 .logo-row:hover .logo-mark { opacity: .86; }
 .logo-mark {
-  width: 40px; height: 40px;
+  width: 46px; height: 46px;
   background: #111; border-radius: 5px;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 700; font-size: 18px; flex-shrink: 0;
+  color: #fff; font-weight: 700; font-size: 20px; flex-shrink: 0;
 }
-.logo-name { font-size: 18px; font-weight: 700; letter-spacing: 2.5px; color: #111; }
-.logo-sub  { font-size: 10px; color: #666; margin-top: 4px; letter-spacing: 0.3px; }
+.logo-name { font-size: 20px; font-weight: 700; letter-spacing: 2.5px; color: #111; }
+.logo-sub  { font-size: 11px; color: #666; margin-top: 5px; letter-spacing: 0.3px; line-height: 1.35; }
 
 .nav { flex: 1; padding: 16px 0; overflow-y: auto; }
-.nav-divider { height: 1px; background: #f0f0f0; margin: 6px 16px; }
-.nav-section { font-size: 12px; color: #666; padding: 16px 22px 7px; letter-spacing: 0.7px; }
+.nav-divider { height: 1px; background: #f0f0f0; margin: 8px 18px; }
+.nav-section { font-size: 13px; color: #666; padding: 18px 26px 8px; letter-spacing: 0.7px; }
 
 .nav-item {
-  display: flex; align-items: center; gap: 11px;
-  min-height: 48px;
-  padding: 12px 22px; font-size: 16px; color: #666;
+  display: flex; align-items: center; gap: 13px;
+  min-height: 56px;
+  padding: 14px 26px; font-size: 17px; color: #666;
   cursor: pointer; transition: background .1s; text-decoration: none;
 }
 .nav-item:hover { background: #f5f5f5; color: #111; }
 .nav-item.active { background: #f5f5f5; color: #111; font-weight: 500; }
 .nav-item.disabled { opacity: 0.38; pointer-events: none; }
-.nav-item i { font-size: 19px; flex-shrink: 0; }
+.nav-item i { font-size: 22px; flex-shrink: 0; }
 
 .sidebar-bottom {
   padding: 8px 0;
