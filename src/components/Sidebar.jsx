@@ -1,9 +1,15 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cx } from '../utils/cx';
 import styles from './Sidebar.module.css';
 
 // active: 'main' | 'input'
 export default function Sidebar({ active }) {
+  const navigate = useNavigate();
+
+  function openServiceGuide() {
+    navigate('/', { state: { scrollToServiceGuideAt: Date.now() } });
+  }
+
   return (
     <div className={styles.sidebar}>
       <div className={styles.logo}>
@@ -31,7 +37,9 @@ export default function Sidebar({ active }) {
       </div>
 
       <div className={styles['sidebar-bottom']}>
-        <Link to="/#service-guide" className={styles['nav-item']}><i className="ti ti-help"></i>도움말</Link>
+        <button type="button" className={styles['nav-item']} onClick={openServiceGuide}>
+          <i className="ti ti-help"></i>도움말
+        </button>
       </div>
     </div>
   );
