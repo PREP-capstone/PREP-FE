@@ -157,6 +157,28 @@
   padding: 22px 24px;
 }
 
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.primaryButton {
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: #111;
+  color: #fff;
+  padding: 14px 24px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primaryButton:hover {
+  opacity: 0.88;
+}
+
 @media (max-width: 1180px) {
   .steps,
   .cards {

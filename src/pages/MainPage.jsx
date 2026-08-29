@@ -82,7 +82,7 @@ export default function MainPage() {
               <i className="ti ti-lock"></i>
               <span><b>개인정보 보호 정책</b> — 리포트는 브라우저에 10분 동안 임시 저장됩니다. PDF 리포트를 미리 저장해 두세요.</span>
             </div>
-            <button className={styles['priv-btn']}>자세히 보기</button>
+            <button className={styles['priv-btn']} onClick={() => navigate('/privacy')}>자세히 보기</button>
           </div>
         </div>
       </div>
