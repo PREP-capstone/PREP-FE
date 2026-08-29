@@ -7,24 +7,20 @@ import styles from './ReportPage.module.css';
 // /report/:sessionId
 // 리포트 화면이 evaluate 호출의 단일 책임을 가진다.
 // InputPage는 세션/검진 데이터 저장 후 /report/:sessionId 로 이동만 하면 된다.
-const reportCache = new Map();
+const pendingReports = new Map();
 
 function loadEvaluateReport(sessionId) {
-  const cached = reportCache.get(sessionId);
-  if (cached?.data) return Promise.resolve(cached.data);
-  if (cached?.promise) return cached.promise;
+  const pending = pendingReports.get(sessionId);
+  if (pending) return pending;
 
   const promise = evaluateSession(sessionId)
-    .then((data) => {
-      reportCache.set(sessionId, { data });
-      return data;
-    })
-    .catch((err) => {
-      reportCache.delete(sessionId);
-      throw err;
+    .finally(() => {
+      if (pendingReports.get(sessionId) === promise) {
+        pendingReports.delete(sessionId);
+      }
     });
 
-  reportCache.set(sessionId, { promise });
+  pendingReports.set(sessionId, promise);
   return promise;
 }
 
@@ -62,7 +58,7 @@ export default function ReportContainer() {
   }, [sessionId, retryKey]);
 
   function retryLoad() {
-    if (sessionId) reportCache.delete(sessionId);
+    if (sessionId) pendingReports.delete(sessionId);
     setRetryKey((key) => key + 1);
   }
 
