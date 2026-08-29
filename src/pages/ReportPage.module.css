@@ -84,6 +84,8 @@
 .tab:hover { color: #555; }
 .tab.active { color: #111; border-bottom-color: #111; }
 .tab.disabled { opacity: .35; pointer-events: none; cursor: default; }
+.tab-panel + .tab-panel { margin-top: 26px; }
+.print-tab-title { display: none; }
 
 /* ── 판단 근거 ── */
 .grounds { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
@@ -215,6 +217,18 @@
   .page { background: #fff; }
   .topnav { display: none; }
   .container { max-width: none; padding: 0; }
+  .tabs { display: none; }
+  .print-tab-title {
+    display: block;
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #111;
+  }
+  .law-quote {
+    max-height: none;
+    overflow: visible;
+  }
   .section,
   .idea-header,
   .ind {

@@ -1,23 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './MainPage.module.css';
 
 export default function MainPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const serviceGuideRef = useRef(null);
-  const [isGuideFocused, setIsGuideFocused] = useState(false);
-
-  useEffect(() => {
-    if (!location.state?.scrollToServiceGuideAt) return;
-
-    serviceGuideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setIsGuideFocused(true);
-
-    const timer = window.setTimeout(() => setIsGuideFocused(false), 1600);
-    return () => window.clearTimeout(timer);
-  }, [location.state?.scrollToServiceGuideAt]);
 
   return (
     <div className={styles.page}>
@@ -47,12 +33,7 @@ export default function MainPage() {
           </div>
 
           {/* 핵심 서비스 — 아이디어 검진 */}
-          <div
-            id="service-guide"
-            ref={serviceGuideRef}
-            className={`${styles['main-card']} ${isGuideFocused ? styles['main-card-focus'] : ''}`}
-            onClick={() => navigate('/input')}
-          >
+          <div className={styles['main-card']} onClick={() => navigate('/input')}>
             <div className={styles['mc-left']}>
               <div className={styles['mc-icon-row']}>
                 <div className={styles['mc-icon']}><i className="ti ti-shield-check"></i></div>

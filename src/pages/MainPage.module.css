@@ -69,10 +69,6 @@
   position: relative; overflow: hidden;
 }
 .main-card:hover { opacity: 0.95; }
-.main-card-focus {
-  outline: 4px solid rgba(37, 99, 168, 0.36);
-  box-shadow: 0 0 0 8px rgba(37, 99, 168, 0.12);
-}
 
 .mc-left { flex: 1; position: relative; z-index: 1; }
 .mc-icon-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
