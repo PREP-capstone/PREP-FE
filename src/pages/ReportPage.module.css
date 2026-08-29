@@ -210,3 +210,15 @@
 .mkt-card.mid .mkt-level { color: #d97706; }
 .mkt-card.low .mkt-level { color: #c0392b; }
 .mkt-desc { font-size: 11px; color: #888; }
+
+@media print {
+  .page { background: #fff; }
+  .topnav { display: none; }
+  .container { max-width: none; padding: 0; }
+  .section,
+  .idea-header,
+  .ind {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}

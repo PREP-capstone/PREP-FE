@@ -31,9 +31,7 @@ export default function Sidebar({ active }) {
       </div>
 
       <div className={styles['sidebar-bottom']}>
-        <a className={styles['nav-item']} href="#!"><i className="ti ti-user"></i>마이페이지</a>
-        <a className={styles['nav-item']} href="#!"><i className="ti ti-help"></i>도움말</a>
-        <a className={styles['nav-item']} href="#!"><i className="ti ti-logout"></i>로그아웃</a>
+        <Link to="/#service-guide" className={styles['nav-item']}><i className="ti ti-help"></i>도움말</Link>
       </div>
     </div>
   );

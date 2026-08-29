@@ -33,7 +33,7 @@ export default function MainPage() {
           </div>
 
           {/* 핵심 서비스 — 아이디어 검진 */}
-          <div className={styles['main-card']} onClick={() => navigate('/input')}>
+          <div id="service-guide" className={styles['main-card']} onClick={() => navigate('/input')}>
             <div className={styles['mc-left']}>
               <div className={styles['mc-icon-row']}>
                 <div className={styles['mc-icon']}><i className="ti ti-shield-check"></i></div>
@@ -80,7 +80,7 @@ export default function MainPage() {
           <div className={styles['priv-banner']}>
             <div className={styles['priv-left']}>
               <i className="ti ti-lock"></i>
-              <span><b>개인정보 보호 정책</b> — 검진 완료 후 입력 데이터는 즉시 삭제됩니다. PDF 리포트를 미리 저장해 두세요.</span>
+              <span><b>개인정보 보호 정책</b> — 리포트는 브라우저에 10분 동안 임시 저장됩니다. PDF 리포트를 미리 저장해 두세요.</span>
             </div>
             <button className={styles['priv-btn']}>자세히 보기</button>
           </div>

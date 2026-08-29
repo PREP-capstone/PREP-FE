@@ -65,6 +65,10 @@ export default function ReportPage({ data }) {
     setTab(id);
   }
 
+  function handleSavePdf() {
+    window.print();
+  }
+
   return (
     <div className={styles.page}>
       {/* 상단 네비 */}
@@ -78,6 +82,9 @@ export default function ReportPage({ data }) {
           <span className={styles['page-title']}>검진 결과 리포트</span>
         </div>
         <div className={styles['nav-right']}>
+          <button className={styles['nav-btn']} onClick={handleSavePdf}>
+            <i className="ti ti-download"></i>PDF 저장
+          </button>
           <button className={styles['nav-btn']} onClick={() => navigate('/input')}>
             <i className="ti ti-arrow-left"></i>검진 다시 하기
           </button>
