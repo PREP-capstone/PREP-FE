@@ -27,21 +27,6 @@ const DATA_SCORE_ROWS = [
   ['생체지표 × 기관연동', 30, '어려움'],
 ];
 
-const BM_DESCRIPTION_FALLBACKS = [
-  ['Freemium', '기본 기능은 무료로 제공하고 고급 기능이나 추가 분석을 유료로 전환하는 모델입니다.'],
-  ['Subscription', '월간 또는 연간 구독료를 받고 지속적인 관리 기능을 제공하는 모델입니다.'],
-  ['Add-on', '기본 서비스 위에 리포트, 코칭, 기기 연동 같은 부가 기능을 추가 판매하는 모델입니다.'],
-  ['Lock-in', '사용자 데이터와 루틴이 쌓일수록 같은 서비스를 계속 쓰게 되는 구조를 만드는 모델입니다.'],
-  ['Two-sided Market', '사용자와 전문가, 기관, 판매자 등 두 집단을 연결하고 중개 가치를 만드는 모델입니다.'],
-  ['Pay Per Use', '검사, 분석, 리포트처럼 실제 사용한 기능 단위로 과금하는 모델입니다.'],
-  ['Sensor As A Service', '센서나 웨어러블 연동 데이터를 기반으로 지속적인 모니터링 가치를 제공하는 모델입니다.'],
-  ['Leverage Customer Data', '사용자 동의 기반 데이터를 분석해 개인화, 리포트, 제휴 가치로 확장하는 모델입니다.'],
-  ['Digitization', '오프라인 관리나 상담 과정을 디지털 서비스로 전환해 비용과 접근성을 개선하는 모델입니다.'],
-  ['Self-service', '사용자가 직접 기록, 확인, 관리하도록 만들어 운영 비용을 줄이는 모델입니다.'],
-  ['Performance-based Contracting', '성과나 개선 결과에 따라 비용을 받는 모델입니다.'],
-  ['Razor And Blade', '기기나 기본 서비스를 진입점으로 제공하고 소모품, 콘텐츠, 추가 기능에서 반복 매출을 만드는 모델입니다.'],
-];
-
 const MATCH_SCOPE_DESCRIPTIONS = {
   exact_match: '카테고리, 세부 기능, 타깃, 서비스 형태가 모두 같은 선례를 기준으로 비교했습니다.',
   relaxed_service_type: '서비스 형태는 제외하고 카테고리, 세부 기능, 타깃이 같은 선례를 기준으로 비교했습니다.',
@@ -85,11 +70,6 @@ function platformCompetitorStatus(value) {
   if (value === true) return { label: '존재함', level: 'risky' };
   if (value === false) return { label: '없음', level: 'safe' };
   return { label: '확인 필요', level: 'unknown' };
-}
-function bmDescriptionFor(rec) {
-  if (rec.bm_description) return rec.bm_description;
-  const pattern = rec.bm_pattern || '';
-  return BM_DESCRIPTION_FALLBACKS.find(([key]) => pattern.includes(key))?.[1] || '이 서비스와 유사한 선례를 바탕으로 검토할 수 있는 수익 구조입니다.';
 }
 function matchScopeDescription(...values) {
   const raw = values.find(Boolean);
@@ -571,7 +551,7 @@ export default function ReportPage({ data }) {
                       <div key={i} className={styles['bm-card']}>
                         <div className={styles['bm-type']}>BM 패턴</div>
                         <div className={styles['bm-name']}>{r.bm_pattern ?? '—'}</div>
-                        <div className={styles['bm-desc']}>{bmDescriptionFor(r)}</div>
+                        <div className={styles['bm-desc']}>{r.bm_description ?? 'BM 설명을 준비 중입니다.'}</div>
                         <div className={styles['bm-rows']}>
                           <div className={styles['bm-row']}><span className={styles['bm-key']}>선례 수준</span><span className={styles['bm-val']}>{r.precedent_level ?? '확인 필요'}</span></div>
                           <div className={styles['bm-row']}>
