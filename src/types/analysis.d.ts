@@ -164,6 +164,8 @@ export interface DataFeasibilityResult {
 
 export interface MarketFeasibilityResult {
   match_scope_description?: string | null;
+  /** @deprecated BE display field is match_scope_description. Kept only for rollout fallback. */
+  match_level?: string | null;
   saturation?: string;
   market_realism_grade?: string;
   platform_competitor_exists?: boolean;
@@ -174,6 +176,8 @@ export interface MarketFeasibilityResult {
 
 export interface BusinessModelResult {
   match_scope_description?: string | null;
+  /** @deprecated BE display field is match_scope_description. Kept only for rollout fallback. */
+  match_level?: string | null;
   recommendations?: Array<{
     bm_pattern?: string | null;
     precedent_level?: '적음' | '보통' | '많음' | string | null;
