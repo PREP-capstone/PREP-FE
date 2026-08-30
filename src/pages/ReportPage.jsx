@@ -16,6 +16,41 @@ const TABS = [
   { id: 'b', label: '수익 구조' },
 ];
 
+const DATA_SCORE_ROWS = [
+  ['라이프스타일 × 수동입력', 1, '쉬움'],
+  ['라이프스타일 × OS연동', 2, '쉬움'],
+  ['라이프스타일 × 기기연동', 4, '보통'],
+  ['라이프스타일 × 기관연동', 10, '보통'],
+  ['생체지표 × 수동입력', 3, '쉬움'],
+  ['생체지표 × OS연동', 6, '보통'],
+  ['생체지표 × 기기연동', 12, '어려움'],
+  ['생체지표 × 기관연동', 30, '어려움'],
+];
+
+const MATCH_SCOPE_DESCRIPTIONS = {
+  exact_match: '카테고리, 세부 기능, 타깃, 서비스 형태가 모두 같은 선례를 기준으로 비교했습니다.',
+  relaxed_service_type: '서비스 형태는 제외하고 카테고리, 세부 기능, 타깃이 같은 선례를 기준으로 비교했습니다.',
+  relaxed_category_only: '타깃과 서비스 형태는 제외하고 카테고리와 세부 기능이 같은 선례를 기준으로 비교했습니다.',
+  insufficient_data: '아직 비교할 수 있는 유사 선례가 부족해 제한된 기준으로 검토했습니다.',
+  target_only: '타깃이 같은 선례를 기준으로 참고했습니다.',
+  category_only: '카테고리가 같은 선례를 기준으로 참고했습니다.',
+  service_type_only: '서비스 형태가 같은 선례를 기준으로 참고했습니다.',
+};
+
+const MATCH_SCOPE_FALLBACKS = [
+  ['exact', MATCH_SCOPE_DESCRIPTIONS.exact_match],
+  ['정확', MATCH_SCOPE_DESCRIPTIONS.exact_match],
+  ['서비스유형', MATCH_SCOPE_DESCRIPTIONS.relaxed_service_type],
+  ['service_type', MATCH_SCOPE_DESCRIPTIONS.relaxed_service_type],
+  ['category', MATCH_SCOPE_DESCRIPTIONS.relaxed_category_only],
+  ['카테고리', MATCH_SCOPE_DESCRIPTIONS.relaxed_category_only],
+  ['target', MATCH_SCOPE_DESCRIPTIONS.target_only],
+  ['타깃', MATCH_SCOPE_DESCRIPTIONS.target_only],
+  ['타겟', MATCH_SCOPE_DESCRIPTIONS.target_only],
+  ['insufficient', MATCH_SCOPE_DESCRIPTIONS.insufficient_data],
+  ['데이터 부족', MATCH_SCOPE_DESCRIPTIONS.insufficient_data],
+];
+
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
 function toLevel(grade) {
   if (!grade) return null;
@@ -27,6 +62,27 @@ function toLevel(grade) {
 }
 function levelLabel(level) {
   return level === 'high' ? '높음' : level === 'low' ? '낮음' : '중간';
+}
+function dataDifficultyLabel(level) {
+  return level === 'high' ? '어려움' : level === 'low' ? '쉬움' : '보통';
+}
+function platformCompetitorStatus(value) {
+  if (value === true) return { label: '존재함', level: 'risky' };
+  if (value === false) return { label: '없음', level: 'safe' };
+  return { label: '확인 필요', level: 'unknown' };
+}
+function matchScopeDescription(...values) {
+  const raw = values.find(Boolean);
+  if (!raw) return '카테고리, 세부 기능, 타깃이 유사한 서비스 선례를 기준으로 비교했습니다.';
+
+  const text = String(raw).trim();
+  if (!text) return '카테고리, 세부 기능, 타깃이 유사한 서비스 선례를 기준으로 비교했습니다.';
+  if (MATCH_SCOPE_DESCRIPTIONS[text]) return MATCH_SCOPE_DESCRIPTIONS[text];
+  if (/[.?!요다습니다]$/.test(text) && text.length > 18) return text;
+
+  const normalized = text.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+  const fallback = MATCH_SCOPE_FALLBACKS.find(([key]) => normalized.includes(key.toLowerCase()));
+  return fallback?.[1] || `${text} 기준으로 확인된 선례를 참고했습니다.`;
 }
 // 셋 중 가장 위험한(높은) 등급 채택 — db_구축_설계서.md "최고값 채택" 원칙
 function maxLevel(...levels) {
@@ -59,7 +115,14 @@ export default function ReportPage({ data }) {
   const regLevel = maxLevel(toLevel(reg.regulatory_grade), toLevel(reg.privacy_grade), toLevel(reg.advertising_grade));
   const dataLevel = toLevel(dataFeas?.risk_level);
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
-  const bmExists = !!bm && bm.match_level !== 'insufficient_data' && (bm.recommendations?.length ?? 0) > 0;
+  const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
+  const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
+  const marketMatchDescription = matchScopeDescription(
+    marketFeas?.match_scope_description,
+    marketFeas?.match_level,
+    marketFeas?.payment_precedent,
+  );
+  const bmMatchDescription = matchScopeDescription(bm?.match_scope_description, bm?.match_level);
 
   function handleTabClick(id) {
     if (isFail && id !== 'r') return;
@@ -315,7 +378,32 @@ export default function ReportPage({ data }) {
               {dataFeas ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
-                    데이터 확보 난이도 점수: <b>{dataFeas.data_feasibility_score}</b> ({dataFeas.risk_level})
+                    데이터 확보 난이도 점수: <b>{dataFeas.data_feasibility_score ?? '-'}</b> / 30점
+                    {dataLevel && <> · {dataDifficultyLabel(dataLevel)}</>}
+                  </div>
+
+                  <div className={styles['score-guide']}>
+                    <div className={styles['score-head']}>
+                      <div>
+                        <div className={styles['sub-title']}>데이터 확보 난이도 점수표</div>
+                        <p>개별점수 = 데이터 유형 난이도 × 수집 방법 난이도, 복수 선택 시 가장 어려운 조합을 기준으로 봅니다.</p>
+                      </div>
+                      <span>30점 만점</span>
+                    </div>
+                    <div className={styles['score-table']}>
+                      {DATA_SCORE_ROWS.map(([label, score, grade]) => (
+                        <div key={label} className={styles['score-row']}>
+                          <span>{label}</span>
+                          <b>{score}점</b>
+                          <em>{grade}</em>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles['score-legend']}>
+                      <span><b>LOW</b> 1~3점 · 쉬움</span>
+                      <span><b>MEDIUM</b> 4~10점 · 보통</span>
+                      <span><b>HIGH</b> 12~30점 · 어려움</span>
+                    </div>
                   </div>
 
                   {(dataFeas.available_sources?.length ?? 0) > 0 && (
@@ -406,16 +494,28 @@ export default function ReportPage({ data }) {
                       <div className={styles['mkt-level']}>{marketFeas.market_realism_grade ?? '—'}</div>
                       <div className={styles['mkt-desc']}>{marketFeas.saturation ?? '-'}</div>
                     </div>
-                    <div className={styles['mkt-card']}>
-                      <div className={styles['mkt-name']}>경쟁사 수</div>
-                      <div className={styles['mkt-level']}>{marketFeas.competitor_count}</div>
-                      <div className={styles['mkt-desc']}>{marketFeas.platform_competitor_exists ? '플랫폼급 존재' : '플랫폼급 없음'}</div>
+                    <div className={cx(styles, 'mkt-card', 'platform', platformStatus.level)}>
+                      <div className={styles['mkt-name']}>플랫폼 경쟁 여부</div>
+                      <div className={styles['mkt-level']}>{platformStatus.label}</div>
+                      <div className={styles['mkt-desc']}>플랫폼급 경쟁사 기준</div>
                     </div>
                     <div className={styles['mkt-card']}>
                       <div className={styles['mkt-name']}>매칭 범위</div>
-                      <div className={styles['mkt-level']} style={{ fontSize: 13 }}>{marketFeas.match_level}</div>
-                      <div className={styles['mkt-desc']}>{marketFeas.payment_precedent ?? '-'}</div>
+                      <div className={styles['mkt-scope']}>{marketMatchDescription}</div>
                     </div>
+                  </div>
+
+                  <div className={styles.grounds}>
+                    <div className={styles.ground}>
+                      <div className={styles['g-dot']}></div>
+                      <b>매칭 범위</b> — {marketMatchDescription}
+                    </div>
+                      {marketFeas.platform_competitor_summary && (
+                        <div className={styles.ground}>
+                          <div className={cx(styles, 'g-dot', marketFeas.platform_competitor_exists ? 'high' : undefined)}></div>
+                          <b>플랫폼 경쟁</b> — {marketFeas.platform_competitor_summary}
+                        </div>
+                      )}
                   </div>
 
                   {(marketFeas.competitor_cards?.length ?? 0) > 0 && (
@@ -443,16 +543,25 @@ export default function ReportPage({ data }) {
               <div className={styles['print-tab-title']}>수익 구조</div>
               {bm && bm.recommendations?.length ? (
                 <>
-                  <div className={styles.ground} style={{ marginBottom: 14 }}>매칭 범위: {bm.match_level}</div>
+                  <div className={styles.ground} style={{ marginBottom: 14 }}>
+                    <b>매칭 범위</b> — {bmMatchDescription}
+                  </div>
                   <div className={styles['bm-grid']}>
                     {bm.recommendations.map((r, i) => (
                       <div key={i} className={styles['bm-card']}>
                         <div className={styles['bm-type']}>BM 패턴</div>
                         <div className={styles['bm-name']}>{r.bm_pattern ?? '—'}</div>
+                        <div className={styles['bm-desc']}>{r.bm_description ?? 'BM 설명을 준비 중입니다.'}</div>
                         <div className={styles['bm-rows']}>
-                          <div className={styles['bm-row']}><span className={styles['bm-key']}>국내 빈도</span><span className={styles['bm-val']}>{r.frequency_score ?? '-'}</span></div>
-                          <div className={styles['bm-row']}><span className={styles['bm-key']}>전체 빈도</span><span className={styles['bm-val']}>{r.frequency_score_global ?? '-'}</span></div>
-                          <div className={styles['bm-row']}><span className={styles['bm-key']}>선례 수준</span><span className={styles['bm-val']}>{r.precedent_level ?? '-'}</span></div>
+                          <div className={styles['bm-row']}><span className={styles['bm-key']}>선례 수준</span><span className={styles['bm-val']}>{r.precedent_level ?? '확인 필요'}</span></div>
+                          <div className={styles['bm-row']}>
+                            <span className={styles['bm-key']}>선례 서비스</span>
+                            <span className={styles['bm-services']}>
+                              {(r.precedent_services?.length ?? 0) > 0
+                                ? r.precedent_services.map((name) => <em key={name}>{name}</em>)
+                                : <span className={styles['bm-val']}>확인 필요</span>}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
