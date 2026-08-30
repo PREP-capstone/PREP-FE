@@ -164,17 +164,28 @@ export interface DataFeasibilityResult {
 
 export interface MarketFeasibilityResult {
   match_level?: string;
+  match_scope_description?: string | null;
   competitor_count?: number;
   saturation?: string;
   market_realism_grade?: string;
   platform_competitor_exists?: boolean;
+  platform_competitor_summary?: string | null;
   payment_precedent?: string | null;
   competitor_cards?: unknown[];
 }
 
 export interface BusinessModelResult {
   match_level?: string;
-  recommendations?: unknown[];
+  match_scope_description?: string | null;
+  recommendations?: Array<{
+    bm_pattern?: string | null;
+    precedent_level?: '적음' | '보통' | '많음' | string | null;
+    precedent_services?: string[];
+    bm_description?: string | null;
+    frequency_score?: number;
+    frequency_score_global?: number;
+    contributing_competitor_ids?: string;
+  }>;
 }
 
 export interface CorrectionCandidate {

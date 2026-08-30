@@ -16,6 +16,17 @@ const TABS = [
   { id: 'b', label: '수익 구조' },
 ];
 
+const DATA_SCORE_ROWS = [
+  ['라이프스타일 × 수동입력', 1, '쉬움'],
+  ['라이프스타일 × OS연동', 2, '쉬움'],
+  ['라이프스타일 × 기기연동', 4, '보통'],
+  ['라이프스타일 × 기관연동', 10, '보통'],
+  ['생체지표 × 수동입력', 3, '쉬움'],
+  ['생체지표 × OS연동', 6, '보통'],
+  ['생체지표 × 기기연동', 12, '어려움'],
+  ['생체지표 × 기관연동', 30, '어려움'],
+];
+
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
 function toLevel(grade) {
   if (!grade) return null;
@@ -59,7 +70,7 @@ export default function ReportPage({ data }) {
   const regLevel = maxLevel(toLevel(reg.regulatory_grade), toLevel(reg.privacy_grade), toLevel(reg.advertising_grade));
   const dataLevel = toLevel(dataFeas?.risk_level);
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
-  const bmExists = !!bm && bm.match_level !== 'insufficient_data' && (bm.recommendations?.length ?? 0) > 0;
+  const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
 
   function handleTabClick(id) {
     if (isFail && id !== 'r') return;
@@ -315,7 +326,32 @@ export default function ReportPage({ data }) {
               {dataFeas ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
-                    데이터 확보 난이도 점수: <b>{dataFeas.data_feasibility_score}</b> ({dataFeas.risk_level})
+                    데이터 확보 난이도 점수: <b>{dataFeas.data_feasibility_score ?? '-'}</b> / 30점
+                    {dataLevel && <> · {levelLabel(dataLevel)}</>}
+                  </div>
+
+                  <div className={styles['score-guide']}>
+                    <div className={styles['score-head']}>
+                      <div>
+                        <div className={styles['sub-title']}>데이터 확보 난이도 점수표</div>
+                        <p>개별점수 = 데이터 유형 난이도 × 수집 방법 난이도, 복수 선택 시 가장 어려운 조합을 기준으로 봅니다.</p>
+                      </div>
+                      <span>30점 만점</span>
+                    </div>
+                    <div className={styles['score-table']}>
+                      {DATA_SCORE_ROWS.map(([label, score, grade]) => (
+                        <div key={label} className={styles['score-row']}>
+                          <span>{label}</span>
+                          <b>{score}점</b>
+                          <em>{grade}</em>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles['score-legend']}>
+                      <span>1~3점 쉬움</span>
+                      <span>4~10점 보통</span>
+                      <span>12~30점 어려움</span>
+                    </div>
                   </div>
 
                   {(dataFeas.available_sources?.length ?? 0) > 0 && (
@@ -407,16 +443,33 @@ export default function ReportPage({ data }) {
                       <div className={styles['mkt-desc']}>{marketFeas.saturation ?? '-'}</div>
                     </div>
                     <div className={styles['mkt-card']}>
-                      <div className={styles['mkt-name']}>경쟁사 수</div>
-                      <div className={styles['mkt-level']}>{marketFeas.competitor_count}</div>
-                      <div className={styles['mkt-desc']}>{marketFeas.platform_competitor_exists ? '플랫폼급 존재' : '플랫폼급 없음'}</div>
+                      <div className={styles['mkt-name']}>플랫폼 경쟁 여부</div>
+                      <div className={styles['mkt-level']}>{marketFeas.platform_competitor_exists ? '존재함' : '없음'}</div>
+                      <div className={styles['mkt-desc']}>플랫폼급 경쟁사 기준</div>
                     </div>
                     <div className={styles['mkt-card']}>
-                      <div className={styles['mkt-name']}>매칭 범위</div>
-                      <div className={styles['mkt-level']} style={{ fontSize: 13 }}>{marketFeas.match_level}</div>
+                      <div className={styles['mkt-name']}>유료화 선례</div>
+                      <div className={styles['mkt-level']} style={{ fontSize: 14 }}>{marketFeas.payment_precedent ? '있음' : '확인 필요'}</div>
                       <div className={styles['mkt-desc']}>{marketFeas.payment_precedent ?? '-'}</div>
                     </div>
                   </div>
+
+                  {(marketFeas.match_scope_description || marketFeas.platform_competitor_summary) && (
+                    <div className={styles.grounds}>
+                      {marketFeas.match_scope_description && (
+                        <div className={styles.ground}>
+                          <div className={styles['g-dot']}></div>
+                          <b>매칭 범위</b> — {marketFeas.match_scope_description}
+                        </div>
+                      )}
+                      {marketFeas.platform_competitor_summary && (
+                        <div className={styles.ground}>
+                          <div className={cx(styles, 'g-dot', marketFeas.platform_competitor_exists ? 'high' : undefined)}></div>
+                          <b>플랫폼 경쟁</b> — {marketFeas.platform_competitor_summary}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {(marketFeas.competitor_cards?.length ?? 0) > 0 && (
                     <div className={styles['comp-grid']}>
@@ -443,16 +496,25 @@ export default function ReportPage({ data }) {
               <div className={styles['print-tab-title']}>수익 구조</div>
               {bm && bm.recommendations?.length ? (
                 <>
-                  <div className={styles.ground} style={{ marginBottom: 14 }}>매칭 범위: {bm.match_level}</div>
+                  <div className={styles.ground} style={{ marginBottom: 14 }}>
+                    매칭 범위: {bm.match_scope_description || bm.match_level || '유사 서비스 선례 기준으로 추천했습니다.'}
+                  </div>
                   <div className={styles['bm-grid']}>
                     {bm.recommendations.map((r, i) => (
                       <div key={i} className={styles['bm-card']}>
                         <div className={styles['bm-type']}>BM 패턴</div>
                         <div className={styles['bm-name']}>{r.bm_pattern ?? '—'}</div>
+                        {r.bm_description && <div className={styles['bm-desc']}>{r.bm_description}</div>}
                         <div className={styles['bm-rows']}>
-                          <div className={styles['bm-row']}><span className={styles['bm-key']}>국내 빈도</span><span className={styles['bm-val']}>{r.frequency_score ?? '-'}</span></div>
-                          <div className={styles['bm-row']}><span className={styles['bm-key']}>전체 빈도</span><span className={styles['bm-val']}>{r.frequency_score_global ?? '-'}</span></div>
-                          <div className={styles['bm-row']}><span className={styles['bm-key']}>선례 수준</span><span className={styles['bm-val']}>{r.precedent_level ?? '-'}</span></div>
+                          <div className={styles['bm-row']}><span className={styles['bm-key']}>선례 수준</span><span className={styles['bm-val']}>{r.precedent_level ?? '확인 필요'}</span></div>
+                          <div className={styles['bm-row']}>
+                            <span className={styles['bm-key']}>선례 서비스</span>
+                            <span className={styles['bm-services']}>
+                              {(r.precedent_services?.length ?? 0) > 0
+                                ? r.precedent_services.map((name) => <em key={name}>{name}</em>)
+                                : <span className={styles['bm-val']}>확인 필요</span>}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
