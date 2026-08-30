@@ -66,6 +66,14 @@ function levelLabel(level) {
 function dataDifficultyLabel(level) {
   return level === 'high' ? '어려움' : level === 'low' ? '쉬움' : '보통';
 }
+function dataAvailabilityLevel(riskLevel) {
+  if (riskLevel === 'low') return 'high';
+  if (riskLevel === 'high') return 'low';
+  return riskLevel;
+}
+function dataAvailabilityLabel(level) {
+  return level === 'high' ? '높음' : level === 'low' ? '낮음' : '중간';
+}
 function platformCompetitorStatus(value) {
   if (value === true) return { label: '존재함', level: 'risky' };
   if (value === false) return { label: '없음', level: 'safe' };
@@ -114,6 +122,7 @@ export default function ReportPage({ data }) {
 
   const regLevel = maxLevel(toLevel(reg.regulatory_grade), toLevel(reg.privacy_grade), toLevel(reg.advertising_grade));
   const dataLevel = toLevel(dataFeas?.risk_level);
+  const dataAvailability = dataAvailabilityLevel(dataLevel);
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
   const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
   const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
@@ -203,10 +212,10 @@ export default function ReportPage({ data }) {
             <div className={cx(styles, 'ind-val', regLevel)}>{levelLabel(regLevel)}</div>
             <IndBar level={regLevel} />
           </div>
-          <div className={cx(styles, 'ind', isFail && 'inactive')}>
+          <div className={cx(styles, 'ind', 'availability', isFail && 'inactive')}>
             <div className={styles['ind-name']}>데이터 확보 가능성</div>
-            <div className={cx(styles, 'ind-val', dataLevel || 'mid')}>{dataFeas ? levelLabel(dataLevel) : '—'}</div>
-            {dataFeas && <IndBar level={dataLevel} />}
+            <div className={cx(styles, 'ind-val', dataAvailability || 'mid')}>{dataFeas ? dataAvailabilityLabel(dataAvailability) : '—'}</div>
+            {dataFeas && <IndBar level={dataAvailability} />}
           </div>
           <div className={cx(styles, 'ind', isFail && 'inactive')}>
             <div className={styles['ind-name']}>시장 현실성</div>
