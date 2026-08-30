@@ -93,9 +93,7 @@ export const passReport = {
     ],
   },
   market_feasibility: {
-    match_level: 'exact_match',
     match_scope_description: '서비스 형태는 제외하고 카테고리, 세부 기능, 타깃이 같은 선례를 기준으로 비교했습니다.',
-    competitor_count: 4,
     saturation: 'Challenging',
     market_realism_grade: '중간',
     platform_competitor_exists: true,
@@ -108,26 +106,19 @@ export const passReport = {
     ],
   },
   business_model: {
-    match_level: 'relaxed_service_type',
     match_scope_description: '카테고리와 타깃이 유사한 웰니스 서비스의 수익화 선례를 기준으로 추천했습니다.',
     recommendations: [
       {
         bm_pattern: 'Freemium',
-        frequency_score: 3,
-        frequency_score_global: 6,
         precedent_level: '보통',
         precedent_services: ['삼성 헬스', 'Sleep Cycle'],
         bm_description: '기본 기록과 요약 기능은 무료로 제공하고, 고급 리포트나 개인화 기능을 유료로 전환하는 모델입니다.',
-        contributing_competitor_ids: 'CP001,CP014,CP022',
       },
       {
         bm_pattern: 'Subscription',
-        frequency_score: 2,
-        frequency_score_global: 5,
         precedent_level: '적음',
         precedent_services: ['Calm'],
         bm_description: '월간 또는 연간 구독료를 받고 지속적인 관리 기능과 콘텐츠를 제공하는 모델입니다.',
-        contributing_competitor_ids: 'CP003,CP019',
       },
     ],
   },

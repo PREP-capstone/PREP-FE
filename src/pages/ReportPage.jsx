@@ -39,6 +39,14 @@ function toLevel(grade) {
 function levelLabel(level) {
   return level === 'high' ? '높음' : level === 'low' ? '낮음' : '중간';
 }
+function dataDifficultyLabel(level) {
+  return level === 'high' ? '어려움' : level === 'low' ? '쉬움' : '보통';
+}
+function platformCompetitorStatus(value) {
+  if (value === true) return { label: '존재함', level: 'risky' };
+  if (value === false) return { label: '없음', level: 'safe' };
+  return { label: '확인 필요', level: 'unknown' };
+}
 // 셋 중 가장 위험한(높은) 등급 채택 — db_구축_설계서.md "최고값 채택" 원칙
 function maxLevel(...levels) {
   const order = { low: 0, mid: 1, high: 2 };
@@ -71,6 +79,9 @@ export default function ReportPage({ data }) {
   const dataLevel = toLevel(dataFeas?.risk_level);
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
   const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
+  const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
+  const marketMatchDescription = marketFeas?.match_scope_description || '카테고리, 세부 기능, 타깃이 유사한 서비스 선례를 기준으로 시장 현실성을 비교했습니다.';
+  const bmMatchDescription = bm?.match_scope_description || '카테고리와 타깃이 유사한 웰니스 서비스의 수익화 선례를 기준으로 추천했습니다.';
 
   function handleTabClick(id) {
     if (isFail && id !== 'r') return;
@@ -327,7 +338,7 @@ export default function ReportPage({ data }) {
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
                     데이터 확보 난이도 점수: <b>{dataFeas.data_feasibility_score ?? '-'}</b> / 30점
-                    {dataLevel && <> · {levelLabel(dataLevel)}</>}
+                    {dataLevel && <> · {dataDifficultyLabel(dataLevel)}</>}
                   </div>
 
                   <div className={styles['score-guide']}>
@@ -348,9 +359,9 @@ export default function ReportPage({ data }) {
                       ))}
                     </div>
                     <div className={styles['score-legend']}>
-                      <span>1~3점 쉬움</span>
-                      <span>4~10점 보통</span>
-                      <span>12~30점 어려움</span>
+                      <span><b>LOW</b> 1~3점 · 쉬움</span>
+                      <span><b>MEDIUM</b> 4~10점 · 보통</span>
+                      <span><b>HIGH</b> 12~30점 · 어려움</span>
                     </div>
                   </div>
 
@@ -442,9 +453,9 @@ export default function ReportPage({ data }) {
                       <div className={styles['mkt-level']}>{marketFeas.market_realism_grade ?? '—'}</div>
                       <div className={styles['mkt-desc']}>{marketFeas.saturation ?? '-'}</div>
                     </div>
-                    <div className={styles['mkt-card']}>
+                    <div className={cx(styles, 'mkt-card', 'platform', platformStatus.level)}>
                       <div className={styles['mkt-name']}>플랫폼 경쟁 여부</div>
-                      <div className={styles['mkt-level']}>{marketFeas.platform_competitor_exists ? '존재함' : '없음'}</div>
+                      <div className={styles['mkt-level']}>{platformStatus.label}</div>
                       <div className={styles['mkt-desc']}>플랫폼급 경쟁사 기준</div>
                     </div>
                     <div className={styles['mkt-card']}>
@@ -454,22 +465,18 @@ export default function ReportPage({ data }) {
                     </div>
                   </div>
 
-                  {(marketFeas.match_scope_description || marketFeas.platform_competitor_summary) && (
-                    <div className={styles.grounds}>
-                      {marketFeas.match_scope_description && (
-                        <div className={styles.ground}>
-                          <div className={styles['g-dot']}></div>
-                          <b>매칭 범위</b> — {marketFeas.match_scope_description}
-                        </div>
-                      )}
+                  <div className={styles.grounds}>
+                    <div className={styles.ground}>
+                      <div className={styles['g-dot']}></div>
+                      <b>매칭 범위</b> — {marketMatchDescription}
+                    </div>
                       {marketFeas.platform_competitor_summary && (
                         <div className={styles.ground}>
                           <div className={cx(styles, 'g-dot', marketFeas.platform_competitor_exists ? 'high' : undefined)}></div>
                           <b>플랫폼 경쟁</b> — {marketFeas.platform_competitor_summary}
                         </div>
                       )}
-                    </div>
-                  )}
+                  </div>
 
                   {(marketFeas.competitor_cards?.length ?? 0) > 0 && (
                     <div className={styles['comp-grid']}>
@@ -497,7 +504,7 @@ export default function ReportPage({ data }) {
               {bm && bm.recommendations?.length ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
-                    매칭 범위: {bm.match_scope_description || bm.match_level || '유사 서비스 선례 기준으로 추천했습니다.'}
+                    <b>매칭 범위</b> — {bmMatchDescription}
                   </div>
                   <div className={styles['bm-grid']}>
                     {bm.recommendations.map((r, i) => (
