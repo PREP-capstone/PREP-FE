@@ -42,6 +42,30 @@ const BM_DESCRIPTION_FALLBACKS = [
   ['Razor And Blade', '기기나 기본 서비스를 진입점으로 제공하고 소모품, 콘텐츠, 추가 기능에서 반복 매출을 만드는 모델입니다.'],
 ];
 
+const MATCH_SCOPE_DESCRIPTIONS = {
+  exact_match: '카테고리, 세부 기능, 타깃, 서비스 형태가 모두 같은 선례를 기준으로 비교했습니다.',
+  relaxed_service_type: '서비스 형태는 제외하고 카테고리, 세부 기능, 타깃이 같은 선례를 기준으로 비교했습니다.',
+  relaxed_category_only: '타깃과 서비스 형태는 제외하고 카테고리와 세부 기능이 같은 선례를 기준으로 비교했습니다.',
+  insufficient_data: '아직 비교할 수 있는 유사 선례가 부족해 제한된 기준으로 검토했습니다.',
+  target_only: '타깃이 같은 선례를 기준으로 참고했습니다.',
+  category_only: '카테고리가 같은 선례를 기준으로 참고했습니다.',
+  service_type_only: '서비스 형태가 같은 선례를 기준으로 참고했습니다.',
+};
+
+const MATCH_SCOPE_FALLBACKS = [
+  ['exact', MATCH_SCOPE_DESCRIPTIONS.exact_match],
+  ['정확', MATCH_SCOPE_DESCRIPTIONS.exact_match],
+  ['서비스유형', MATCH_SCOPE_DESCRIPTIONS.relaxed_service_type],
+  ['service_type', MATCH_SCOPE_DESCRIPTIONS.relaxed_service_type],
+  ['category', MATCH_SCOPE_DESCRIPTIONS.relaxed_category_only],
+  ['카테고리', MATCH_SCOPE_DESCRIPTIONS.relaxed_category_only],
+  ['target', MATCH_SCOPE_DESCRIPTIONS.target_only],
+  ['타깃', MATCH_SCOPE_DESCRIPTIONS.target_only],
+  ['타겟', MATCH_SCOPE_DESCRIPTIONS.target_only],
+  ['insufficient', MATCH_SCOPE_DESCRIPTIONS.insufficient_data],
+  ['데이터 부족', MATCH_SCOPE_DESCRIPTIONS.insufficient_data],
+];
+
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
 function toLevel(grade) {
   if (!grade) return null;
@@ -66,6 +90,19 @@ function bmDescriptionFor(rec) {
   if (rec.bm_description) return rec.bm_description;
   const pattern = rec.bm_pattern || '';
   return BM_DESCRIPTION_FALLBACKS.find(([key]) => pattern.includes(key))?.[1] || '이 서비스와 유사한 선례를 바탕으로 검토할 수 있는 수익 구조입니다.';
+}
+function matchScopeDescription(...values) {
+  const raw = values.find(Boolean);
+  if (!raw) return '카테고리, 세부 기능, 타깃이 유사한 서비스 선례를 기준으로 비교했습니다.';
+
+  const text = String(raw).trim();
+  if (!text) return '카테고리, 세부 기능, 타깃이 유사한 서비스 선례를 기준으로 비교했습니다.';
+  if (MATCH_SCOPE_DESCRIPTIONS[text]) return MATCH_SCOPE_DESCRIPTIONS[text];
+  if (/[.?!요다습니다]$/.test(text) && text.length > 18) return text;
+
+  const normalized = text.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+  const fallback = MATCH_SCOPE_FALLBACKS.find(([key]) => normalized.includes(key.toLowerCase()));
+  return fallback?.[1] || `${text} 기준으로 확인된 선례를 참고했습니다.`;
 }
 // 셋 중 가장 위험한(높은) 등급 채택 — db_구축_설계서.md "최고값 채택" 원칙
 function maxLevel(...levels) {
@@ -100,8 +137,12 @@ export default function ReportPage({ data }) {
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
   const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
   const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
-  const marketMatchDescription = marketFeas?.match_scope_description || '카테고리, 세부 기능, 타깃이 유사한 서비스 선례를 기준으로 시장 현실성을 비교했습니다.';
-  const bmMatchDescription = bm?.match_scope_description || '카테고리와 타깃이 유사한 웰니스 서비스의 수익화 선례를 기준으로 추천했습니다.';
+  const marketMatchDescription = matchScopeDescription(
+    marketFeas?.match_scope_description,
+    marketFeas?.match_level,
+    marketFeas?.payment_precedent,
+  );
+  const bmMatchDescription = matchScopeDescription(bm?.match_scope_description, bm?.match_level);
 
   function handleTabClick(id) {
     if (isFail && id !== 'r') return;
@@ -479,9 +520,8 @@ export default function ReportPage({ data }) {
                       <div className={styles['mkt-desc']}>플랫폼급 경쟁사 기준</div>
                     </div>
                     <div className={styles['mkt-card']}>
-                      <div className={styles['mkt-name']}>유료화 선례</div>
-                      <div className={styles['mkt-level']} style={{ fontSize: 14 }}>{marketFeas.payment_precedent ? '있음' : '확인 필요'}</div>
-                      <div className={styles['mkt-desc']}>{marketFeas.payment_precedent ?? '-'}</div>
+                      <div className={styles['mkt-name']}>매칭 범위</div>
+                      <div className={styles['mkt-scope']}>{marketMatchDescription}</div>
                     </div>
                   </div>
 

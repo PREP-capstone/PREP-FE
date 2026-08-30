@@ -229,6 +229,7 @@
 .mkt-card.platform.safe .mkt-level { color: #2a7a2a; }
 .mkt-card.platform.unknown .mkt-level { color: #d97706; }
 .mkt-desc { font-size: 11px; color: #888; }
+.mkt-scope { font-size: 13px; line-height: 1.55; color: #333; font-weight: 600; word-break: keep-all; }
 
 @media print {
   .page { background: #fff; }
