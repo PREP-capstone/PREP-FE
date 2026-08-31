@@ -11,10 +11,9 @@ export default function MainPage() {
 
       <div className={styles.main}>
         <div className={styles.topbar}>
-          <div className={styles['topbar-greeting']}>안녕하세요, <b>김지연</b>님</div>
+          <div className={styles['topbar-title']}>웰니스 창업 준비 플랫폼</div>
           <div className={styles['topbar-right']}>
             <div className={styles['icon-btn']}><i className="ti ti-bell"></i></div>
-            <div className={styles.avatar}>김</div>
           </div>
         </div>
 
@@ -81,9 +80,9 @@ export default function MainPage() {
           <div className={styles['priv-banner']}>
             <div className={styles['priv-left']}>
               <i className="ti ti-lock"></i>
-              <span><b>개인정보 보호 정책</b> — 검진 완료 후 입력 데이터는 즉시 삭제됩니다. PDF 리포트를 미리 저장해 두세요.</span>
+              <span><b>개인정보 보호 정책</b> — 리포트는 브라우저에 10분 동안 임시 저장됩니다. PDF 리포트를 미리 저장해 두세요.</span>
             </div>
-            <button className={styles['priv-btn']}>자세히 보기</button>
+            <button className={styles['priv-btn']} onClick={() => navigate('/privacy')}>자세히 보기</button>
           </div>
         </div>
       </div>

@@ -268,7 +268,7 @@ export default function ReportPage({ data }) {
             <div className={cx(styles, 'ind-val', dataAvailability || 'mid')}>{dataFeas ? dataAvailabilityLabel(dataAvailability) : '—'}</div>
             {dataFeas && <IndBar level={dataAvailability} />}
           </div>
-          <div className={cx(styles, 'ind', isFail && 'inactive')}>
+          <div className={cx(styles, 'ind', 'availability', isFail && 'inactive')}>
             <div className={styles['ind-name']}>시장 현실성</div>
             <div className={cx(styles, 'ind-val', marketLevel || 'mid')}>{marketFeas ? levelLabel(marketLevel) : '—'}</div>
             {marketFeas && <IndBar level={marketLevel} />}
