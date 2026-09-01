@@ -38,6 +38,24 @@ export function loadReportCache(sessionId) {
   }
 }
 
+// 캐시된 리포트의 만료 시각(ms). 만료됐거나 없으면 null.
+// 리포트 상단 "임시 보관" 안내 문구에 표시할 때 사용.
+export function loadReportExpiry(sessionId) {
+  if (!sessionId) return null;
+  try {
+    const raw = sessionStorage.getItem(keyFor(sessionId));
+    if (!raw) return null;
+
+    const cached = JSON.parse(raw);
+    if (!cached?.expiresAt || cached.expiresAt <= Date.now()) {
+      return null;
+    }
+    return cached.expiresAt;
+  } catch {
+    return null;
+  }
+}
+
 export function clearReportCache(sessionId) {
   if (!sessionId) return;
   try {

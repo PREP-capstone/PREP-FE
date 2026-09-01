@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cx } from '../utils/cx';
-import { getLocalDeletedAt } from '../utils/deletedIdeas';
 import styles from './ReportPage.module.css';
 
 // 이 페이지는 백엔드 POST /api/v1/analysis/evaluate 의 응답(EvaluateResult)을 그대로 받는다.
@@ -53,8 +52,8 @@ const MATCH_SCOPE_FALLBACKS = [
 ];
 
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
-function formatDeletedAt(value) {
-  // "0000-00-00 00:00" 형식으로 표시. 파싱 불가하면 원본 문자열 그대로.
+function formatExpiry(value) {
+  // 만료 시각(ms 또는 파싱 가능한 값)을 "0000-00-00 00:00" 형식으로 표시.
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
   const p = (n) => String(n).padStart(2, '0');
@@ -107,7 +106,7 @@ function maxLevel(...levels) {
   return levels.filter(Boolean).reduce((acc, cur) => (order[cur] > order[acc] ? cur : acc), 'low');
 }
 
-export default function ReportPage({ data }) {
+export default function ReportPage({ data, expiresAt = null }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('r');
   const [isPrintMode, setIsPrintMode] = useState(false);
@@ -125,9 +124,6 @@ export default function ReportPage({ data }) {
     one_liner: oneLiner,
     next_actions: nextActions = [],
   } = data || {};
-
-  // 삭제 시각: 백엔드 deleted_at 우선, 없으면 프론트 로컬 기록으로 폴백
-  const deletedAt = session?.deleted_at ?? getLocalDeletedAt(session?.session_id);
 
   const isFail = gate.verdict === 'FAIL';
   const isConditional = gate.verdict === 'CONDITIONAL';
@@ -180,13 +176,15 @@ export default function ReportPage({ data }) {
         </div>
       </div>
 
-      {/* 삭제된 아이디어 안내 —
-          백엔드 session.deleted_at 이 있으면 그 값을, 없으면 프론트 로컬 기록을 쓴다.
-          (백엔드에 deleted_at 필드가 아직 없어, 삭제 기능이 로컬에 기록하기 전까지는 뜨지 않음) */}
-      {deletedAt && (
-        <div className={styles['deleted-banner']}>
-          <i className="ti ti-trash"></i>
-          <span>해당 아이디어는 {formatDeletedAt(deletedAt)}에 삭제되었습니다.</span>
+      {/* 임시 보관 안내 — 리포트는 이 브라우저에만 10분간 임시 보관되며 만료 후 사라진다.
+          BE는 별도 TTL/deleted_at을 두지 않고, FE 캐시(reportCache)의 expiresAt을 그대로 표시한다.
+          "서버에서 삭제"가 아니라 "저장 안 함 + 브라우저 임시 보관"임을 강조한다. */}
+      {expiresAt && (
+        <div className={styles['ttl-banner']}>
+          <i className="ti ti-clock-hour-4"></i>
+          <span>
+            입력한 아이디어는 저장하지 않으며, 리포트는 이 브라우저에서 {formatExpiry(expiresAt)}까지 임시로만 보관됩니다.
+          </span>
         </div>
       )}
 
@@ -635,11 +633,14 @@ export default function ReportPage({ data }) {
               <button className={styles['nav-btn']} onClick={handleSavePdf}>
                 <i className="ti ti-download"></i>PDF 저장
               </button>
+              {/* 지원금 매칭 페이지 경로 미정 → 페이지 구현 전까지 비활성화.
+                  경로 확정 시 disabled 제거하고 onClick={() => navigate('/...')} 연결. */}
               <button
-                className={cx(styles, 'nav-btn', 'cta-primary')}
-                onClick={() => navigate('/support-match')}
+                className={cx(styles, 'nav-btn', 'cta-primary', 'disabled')}
+                disabled
+                title="지원금 매칭 서비스는 준비 중이에요"
               >
-                지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
+                지원금 매칭 (준비 중) <i className="ti ti-lock"></i>
               </button>
             </div>
           </div>
