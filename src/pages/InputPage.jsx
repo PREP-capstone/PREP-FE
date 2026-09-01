@@ -520,9 +520,6 @@ export default function InputPage() {
             </button>
             <span className={styles['topbar-title']}>아이디어 검진</span>
           </div>
-          <div className={styles['topbar-right']}>
-            <div className={styles['icon-btn']}><i className="ti ti-bell"></i></div>
-          </div>
         </div>
 
         <div className={styles.content}>

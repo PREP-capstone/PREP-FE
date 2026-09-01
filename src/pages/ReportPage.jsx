@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cx } from '../utils/cx';
+import { getLocalDeletedAt } from '../utils/deletedIdeas';
 import styles from './ReportPage.module.css';
 
 // 이 페이지는 백엔드 POST /api/v1/analysis/evaluate 의 응답(EvaluateResult)을 그대로 받는다.
@@ -52,6 +53,14 @@ const MATCH_SCOPE_FALLBACKS = [
 ];
 
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
+function formatDeletedAt(value) {
+  // "0000-00-00 00:00" 형식으로 표시. 파싱 불가하면 원본 문자열 그대로.
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function toLevel(grade) {
   if (!grade) return null;
   const v = String(grade).toUpperCase();
@@ -117,6 +126,9 @@ export default function ReportPage({ data }) {
     next_actions: nextActions = [],
   } = data || {};
 
+  // 삭제 시각: 백엔드 deleted_at 우선, 없으면 프론트 로컬 기록으로 폴백
+  const deletedAt = session?.deleted_at ?? getLocalDeletedAt(session?.session_id);
+
   const isFail = gate.verdict === 'FAIL';
   const isConditional = gate.verdict === 'CONDITIONAL';
 
@@ -167,6 +179,16 @@ export default function ReportPage({ data }) {
           </button>
         </div>
       </div>
+
+      {/* 삭제된 아이디어 안내 —
+          백엔드 session.deleted_at 이 있으면 그 값을, 없으면 프론트 로컬 기록을 쓴다.
+          (백엔드에 deleted_at 필드가 아직 없어, 삭제 기능이 로컬에 기록하기 전까지는 뜨지 않음) */}
+      {deletedAt && (
+        <div className={styles['deleted-banner']}>
+          <i className="ti ti-trash"></i>
+          <span>해당 아이디어는 {formatDeletedAt(deletedAt)}에 삭제되었습니다.</span>
+        </div>
+      )}
 
       <div className={styles.container}>
 
@@ -338,7 +360,7 @@ export default function ReportPage({ data }) {
                   {reg.matched_rules.map((r, i) => (
                     <div key={i} className={styles['law-card']}>
                       <div className={styles['law-meta']}>
-                        <span>{r.legal_basis?.document_id ?? '근거 문서'}</span>
+                        <span>{r.legal_basis?.title ?? r.legal_basis?.document_id ?? '근거 문서'}</span>
                         {r.legal_basis?.article && <b>{r.legal_basis.article}</b>}
                         {r.exact_phrase_match && <em>직접 문구 매칭</em>}
                       </div>
@@ -597,6 +619,28 @@ export default function ReportPage({ data }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 하단 안내 — 지원금 매칭 유도 (긍정 프레임). 인쇄 시 제외.
+            지원금 매칭 페이지 경로 미정 → navigate 대상은 확정되면 교체 */}
+        {!isPrintMode && (
+          <div className={styles['report-footer-cta']}>
+            <div className={styles['footer-cta-text']}>
+              <i className="ti ti-wallet"></i>
+              <span>PDF를 저장하시면 지원금 매칭 서비스도 같이 사용 가능해요!</span>
+            </div>
+            <div className={styles['footer-cta-btns']}>
+              <button className={styles['nav-btn']} onClick={handleSavePdf}>
+                <i className="ti ti-download"></i>PDF 저장
+              </button>
+              <button
+                className={cx(styles, 'nav-btn', 'cta-primary')}
+                onClick={() => navigate('/support-match')}
+              >
+                지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
+              </button>
             </div>
           </div>
         )}
