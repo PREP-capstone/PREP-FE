@@ -12,9 +12,6 @@ export default function MainPage() {
       <div className={styles.main}>
         <div className={styles.topbar}>
           <div className={styles['topbar-title']}>웰니스 창업 준비 플랫폼</div>
-          <div className={styles['topbar-right']}>
-            <div className={styles['icon-btn']}><i className="ti ti-bell"></i></div>
-          </div>
         </div>
 
         <div className={styles.content}>

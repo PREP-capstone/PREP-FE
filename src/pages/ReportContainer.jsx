@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReportPage from './ReportPage';
 import { evaluateSession } from '../api/analysisApi';
-import { loadReportCache, saveReportCache } from '../utils/reportCache';
+import { loadReportCache, loadReportExpiry, saveReportCache } from '../utils/reportCache';
 import styles from './ReportPage.module.css';
 
 // /report/:sessionId
@@ -36,6 +36,7 @@ export default function ReportContainer() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [expiresAt, setExpiresAt] = useState(null);
   const [error, setError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -54,6 +55,8 @@ export default function ReportContainer() {
       .then((report) => {
         if (cancelled) return;
         setData(report);
+        // 캐시에 저장된 만료 시각을 읽어 리포트 상단 안내에 사용
+        setExpiresAt(loadReportExpiry(sessionId));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -94,5 +97,5 @@ export default function ReportContainer() {
     );
   }
 
-  return <ReportPage data={data} />;
+  return <ReportPage data={data} expiresAt={expiresAt} />;
 }

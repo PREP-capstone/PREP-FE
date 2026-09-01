@@ -52,6 +52,14 @@ const MATCH_SCOPE_FALLBACKS = [
 ];
 
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
+function formatExpiry(value) {
+  // 만료 시각(ms 또는 파싱 가능한 값)을 "0000-00-00 00:00" 형식으로 표시.
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function toLevel(grade) {
   if (!grade) return null;
   const v = String(grade).toUpperCase();
@@ -111,7 +119,7 @@ function maxLevel(...levels) {
   return levels.filter(Boolean).reduce((acc, cur) => (order[cur] > order[acc] ? cur : acc), 'low');
 }
 
-export default function ReportPage({ data }) {
+export default function ReportPage({ data, expiresAt = null }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('r');
   const [isPrintMode, setIsPrintMode] = useState(false);
@@ -180,6 +188,18 @@ export default function ReportPage({ data }) {
           </button>
         </div>
       </div>
+
+      {/* 임시 보관 안내 — 리포트는 이 브라우저에만 10분간 임시 보관되며 만료 후 사라진다.
+          BE는 별도 TTL/deleted_at을 두지 않고, FE 캐시(reportCache)의 expiresAt을 그대로 표시한다.
+          "서버에서 삭제"가 아니라 "저장 안 함 + 브라우저 임시 보관"임을 강조한다. */}
+      {expiresAt && (
+        <div className={styles['ttl-banner']}>
+          <i className="ti ti-clock-hour-4"></i>
+          <span>
+            입력한 아이디어는 저장하지 않으며, 리포트는 이 브라우저에서 {formatExpiry(expiresAt)}까지 임시로만 보관됩니다.
+          </span>
+        </div>
+      )}
 
       <div className={styles.container}>
 
@@ -389,7 +409,7 @@ export default function ReportPage({ data }) {
                   {reg.matched_rules.map((r, i) => (
                     <div key={i} className={styles['law-card']}>
                       <div className={styles['law-meta']}>
-                        <span>{r.legal_basis?.document_id ?? '근거 문서'}</span>
+                        <span>{r.legal_basis?.title ?? r.legal_basis?.document_id ?? '근거 문서'}</span>
                         {r.legal_basis?.article && <b>{r.legal_basis.article}</b>}
                         {r.exact_phrase_match && <em>직접 문구 매칭</em>}
                       </div>
@@ -648,6 +668,31 @@ export default function ReportPage({ data }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 하단 안내 — 지원금 매칭 유도 (긍정 프레임). 인쇄 시 제외.
+            지원금 매칭 페이지 경로 미정 → navigate 대상은 확정되면 교체 */}
+        {!isPrintMode && (
+          <div className={styles['report-footer-cta']}>
+            <div className={styles['footer-cta-text']}>
+              <i className="ti ti-wallet"></i>
+              <span>PDF를 저장하시면 지원금 매칭 서비스도 같이 사용 가능해요!</span>
+            </div>
+            <div className={styles['footer-cta-btns']}>
+              <button className={styles['nav-btn']} onClick={handleSavePdf}>
+                <i className="ti ti-download"></i>PDF 저장
+              </button>
+              {/* 지원금 매칭 페이지 경로 미정 → 페이지 구현 전까지 비활성화.
+                  경로 확정 시 disabled 제거하고 onClick={() => navigate('/...')} 연결. */}
+              <button
+                className={cx(styles, 'nav-btn', 'cta-primary', 'disabled')}
+                disabled
+                title="지원금 매칭 서비스는 준비 중이에요"
+              >
+                지원금 매칭 (준비 중) <i className="ti ti-lock"></i>
+              </button>
             </div>
           </div>
         )}
