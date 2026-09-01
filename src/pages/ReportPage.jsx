@@ -63,6 +63,19 @@ function toLevel(grade) {
 function levelLabel(level) {
   return level === 'high' ? '높음' : level === 'low' ? '낮음' : '중간';
 }
+// 종합 신호등(빨강/노랑/초록) → 배지 색상 세트. 배경은 연하게, 글씨/점은 진하게.
+function signalStyle(signal) {
+  switch (signal) {
+    case '초록':
+      return { key: 'green', bg: '#eafbea', fg: '#1e6b1e', dot: '#2a7a2a' };
+    case '노랑':
+      return { key: 'yellow', bg: '#fef9e7', fg: '#8a5a00', dot: '#e0a400' };
+    case '빨강':
+      return { key: 'red', bg: '#fdecea', fg: '#a5281b', dot: '#c0392b' };
+    default:
+      return { key: 'none', bg: '#f2f2f2', fg: '#555', dot: '#999' };
+  }
+}
 function dataDifficultyLabel(level) {
   return level === 'high' ? '어려움' : level === 'low' ? '쉬움' : '보통';
 }
@@ -189,11 +202,49 @@ export default function ReportPage({ data }) {
             )}
           </div>
           {(overallSignal || overallSummary) && (
-            <div className={styles.ground} style={{ marginTop: 14 }}>
-              {overallSignal && <b>종합 신호등: {overallSignal}</b>}
-              {overallSignal && overallSummary ? ' · ' : ''}
-              {overallSummary}
-            </div>
+            (() => {
+              const s = signalStyle(overallSignal);
+              return (
+                <div
+                  style={{
+                    marginTop: 14,
+                    borderRadius: 8,
+                    padding: '15px 17px',
+                    background: overallSignal ? s.bg : '#f8f8f8',
+                    color: '#444',
+                    fontSize: 15,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {overallSignal && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        marginBottom: 8,
+                        color: s.fg,
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          background: s.dot,
+                          flexShrink: 0,
+                        }}
+                      />
+                      종합 신호등: {overallSignal}
+                    </div>
+                  )}
+                  {overallSummary && <div>{overallSummary}</div>}
+                </div>
+              );
+            })()
           )}
           {(session.category_1 || session.category_2 || session.target) && (
             <div className={styles['ih-tags']}>
@@ -217,7 +268,7 @@ export default function ReportPage({ data }) {
             <div className={cx(styles, 'ind-val', dataAvailability || 'mid')}>{dataFeas ? dataAvailabilityLabel(dataAvailability) : '—'}</div>
             {dataFeas && <IndBar level={dataAvailability} />}
           </div>
-          <div className={cx(styles, 'ind', isFail && 'inactive')}>
+          <div className={cx(styles, 'ind', 'availability', isFail && 'inactive')}>
             <div className={styles['ind-name']}>시장 현실성</div>
             <div className={cx(styles, 'ind-val', marketLevel || 'mid')}>{marketFeas ? levelLabel(marketLevel) : '—'}</div>
             {marketFeas && <IndBar level={marketLevel} />}
