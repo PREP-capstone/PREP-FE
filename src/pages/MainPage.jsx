@@ -61,7 +61,7 @@ export default function MainPage() {
           {/* 지원금 매칭 — 가로 리스트형 */}
           <div className={styles['sub-divider']}>검진 후 이용 가능한 서비스</div>
 
-          <div className={styles['service-row']}>
+          <div className={styles['service-row']} onClick={() => navigate('/funding-match')}>
             <div className={styles['sr-icon']}><i className="ti ti-wallet"></i></div>
             <div className={styles['sr-body']}>
               <div className={styles['sr-top']}>
@@ -70,7 +70,19 @@ export default function MainPage() {
               </div>
               <div className={styles['sr-desc']}>검진 결과를 바탕으로 내 사업에 맞는 창업 지원사업을 자동으로 추천해드립니다.</div>
             </div>
-            <div className={styles['sr-arr']}>검진 후 이용 가능 <i className="ti ti-lock"></i></div>
+            <div className={styles['sr-arr']}>바로가기 <i className="ti ti-arrow-right"></i></div>
+          </div>
+
+          <div className={styles['service-row']} onClick={() => navigate('/proposal-writer')}>
+            <div className={styles['sr-icon']}><i className="ti ti-file-pencil"></i></div>
+            <div className={styles['sr-body']}>
+              <div className={styles['sr-top']}>
+                <span className={styles['sr-name']}>제안서 자동 작성</span>
+                <span className={styles['sr-tag']}>부가 서비스</span>
+              </div>
+              <div className={styles['sr-desc']}>아이디어검진 리포트 PDF를 바탕으로 창업 지원사업 제안서 초안을 문서 형식으로 작성합니다.</div>
+            </div>
+            <div className={styles['sr-arr']}>바로가기 <i className="ti ti-arrow-right"></i></div>
           </div>
 
           {/* 개인정보 배너 */}

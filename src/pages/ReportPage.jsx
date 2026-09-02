@@ -672,8 +672,7 @@ export default function ReportPage({ data, expiresAt = null }) {
           </div>
         )}
 
-        {/* 하단 안내 — 지원금 매칭 유도 (긍정 프레임). 인쇄 시 제외.
-            지원금 매칭 페이지 경로 미정 → navigate 대상은 확정되면 교체 */}
+        {/* 하단 안내 — 지원금 매칭 유도 (긍정 프레임). 인쇄 시 제외. */}
         {!isPrintMode && (
           <div className={styles['report-footer-cta']}>
             <div className={styles['footer-cta-text']}>
@@ -684,14 +683,11 @@ export default function ReportPage({ data, expiresAt = null }) {
               <button className={styles['nav-btn']} onClick={handleSavePdf}>
                 <i className="ti ti-download"></i>PDF 저장
               </button>
-              {/* 지원금 매칭 페이지 경로 미정 → 페이지 구현 전까지 비활성화.
-                  경로 확정 시 disabled 제거하고 onClick={() => navigate('/...')} 연결. */}
               <button
-                className={cx(styles, 'nav-btn', 'cta-primary', 'disabled')}
-                disabled
-                title="지원금 매칭 서비스는 준비 중이에요"
+                className={cx(styles, 'nav-btn', 'cta-primary')}
+                onClick={() => navigate('/funding-match')}
               >
-                지원금 매칭 (준비 중) <i className="ti ti-lock"></i>
+                지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
               </button>
             </div>
           </div>

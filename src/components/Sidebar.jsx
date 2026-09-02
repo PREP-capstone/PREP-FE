@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { cx } from '../utils/cx';
 import styles from './Sidebar.module.css';
 
-// active: 'main' | 'input' | 'help'
+// active: 'main' | 'input' | 'funding' | 'proposal' | 'help'
 export default function Sidebar({ active }) {
   return (
     <div className={styles.sidebar}>
@@ -25,9 +25,12 @@ export default function Sidebar({ active }) {
           <i className="ti ti-shield-check"></i>아이디어 검진
         </Link>
         <div className={styles['nav-section']}>검진 후 이용 가능</div>
-        <a className={cx(styles, 'nav-item', 'disabled')} href="#!">
+        <Link to="/funding-match" className={cx(styles, 'nav-item', active === 'funding' && 'active')}>
           <i className="ti ti-wallet"></i>지원금 매칭
-        </a>
+        </Link>
+        <Link to="/proposal-writer" className={cx(styles, 'nav-item', active === 'proposal' && 'active')}>
+          <i className="ti ti-file-pencil"></i>제안서 작성
+        </Link>
       </div>
 
       <div className={styles['sidebar-bottom']}>
