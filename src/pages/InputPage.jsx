@@ -179,7 +179,7 @@ export default function InputPage() {
   // STEP 4 — 수집방법 / 형태 / 목적
   const [method, setMethod] = useState(new Set(['user_input']));
   const [form, setForm] = useState(new Set(['none']));
-  const [purpose, setPurpose] = useState(0);
+  const [purpose, setPurpose] = useState(null);
 
   // 백엔드 통신 상태
   const [submitting, setSubmitting] = useState(false);
@@ -253,7 +253,7 @@ export default function InputPage() {
   const cat1OutOfList = cat1Manual.length > 0 && !isValidCategory1(cat1Manual);
   const cat2OutOfList = cat2Manual.length > 0 && !isValidCategory2(cat2Manual);
   const hasSensitive = Object.values(tags).includes('S');
-  const purposeWarn = PURPOSE_OPTS[purpose].warn;
+  const purposeWarn = purpose != null && PURPOSE_OPTS[purpose]?.warn;
 
   const targetAuto = useMemo(() => {
     const ages = Object.entries(tags).filter(([, g]) => g === 'AGE').map(([l]) => l);
@@ -294,7 +294,7 @@ export default function InputPage() {
     setCat1Manual('');
   }
   function onCat2Pill(opt) {
-    setCat2(opt);
+    setCat2((prev) => (prev === opt ? '' : opt));
     setCat2Manual('');
   }
   function onCat1ManualInput(val) {
@@ -406,13 +406,17 @@ export default function InputPage() {
       target: effectiveTarget || null,
     };
 
-    // 활용 목적 → service_actions (라벨 아님, value로 전송)
-    const purposeOpt = PURPOSE_OPTS[purpose];
+    // 활용 목적 → service_actions (라벨 아님, value로 전송). 선택 항목이므로 미선택이면 필드를 생략한다.
+    const purposeOpt = purpose == null ? null : PURPOSE_OPTS[purpose];
     const healthDataPayload = healthDataItems.length
       ? {
           health_data_items: healthDataItems,
-          processing_purpose: [purposeOpt.name],
-          service_actions: [purposeOpt.value],
+          ...(purposeOpt
+            ? {
+                processing_purpose: [purposeOpt.name],
+                service_actions: [purposeOpt.value],
+              }
+            : {}),
         }
       : null;
 
@@ -963,14 +967,14 @@ export default function InputPage() {
                   </div>
                   <div className={styles.card}>
                     <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-                      선택하신 데이터를 어떤 목적으로 활용할 계획인지 선택해주세요. 규제 위험도 판별에 활용됩니다.
+                      선택하신 데이터를 어떤 목적으로 활용할 계획인지 선택해주세요. 선택한 항목을 다시 누르면 해제됩니다.
                     </p>
                     <div className={styles['radio-grid']}>
                       {PURPOSE_OPTS.map((opt, i) => (
                         <div
                           key={opt.name}
                           className={cx(styles, 'rc', purpose === i && 'on')}
-                          onClick={() => setPurpose(i)}
+                          onClick={() => setPurpose((prev) => (prev === i ? null : i))}
                         >
                           <div className={styles['rc-dot']}></div>
                           <div><div className={styles['rc-name']}>{opt.name}</div><div className={styles['rc-sub']}>{opt.sub}</div></div>
