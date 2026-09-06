@@ -301,6 +301,26 @@ export default function ReportPage({ data, expiresAt = null }) {
           </div>
         </div>
 
+        {isFail && (
+          <div className={styles['fail-guidance']}>
+            <div className={styles['fail-guidance-icon']}>
+              <i className="ti ti-shield-x"></i>
+            </div>
+            <div className={styles['fail-guidance-body']}>
+              <div className={styles['fail-guidance-title']}>의료기기 해당 가능성이 높아 후속 분석이 중단되었습니다.</div>
+              <p>
+                현재 리포트에서는 규제 위험도만 우선 확인할 수 있습니다. 데이터 확보 가능성, 시장 현실성,
+                수익 구조 분석은 의료기기 리스크를 낮추는 방향으로 아이디어를 수정한 뒤 다시 검진하면 확인할 수 있습니다.
+              </p>
+              <div className={styles['fail-guidance-list']}>
+                <span>데이터 확보 가능성 분석 제외</span>
+                <span>시장 현실성 분석 제외</span>
+                <span>수익 구조 분석 제외</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 서비스 분류 & GATE 근거 */}
         <div className={styles.section}>
           <div className={styles['sec-title']}>서비스 분류 · GATE 판정</div>
