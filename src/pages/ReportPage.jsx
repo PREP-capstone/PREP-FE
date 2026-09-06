@@ -313,9 +313,9 @@ export default function ReportPage({ data, expiresAt = null }) {
                 수익 구조 분석은 의료기기 리스크를 낮추는 방향으로 아이디어를 수정한 뒤 다시 검진하면 확인할 수 있습니다.
               </p>
               <div className={styles['fail-guidance-list']}>
-                <span>데이터 확보 가능성 · 분석 제외</span>
-                <span>시장 현실성 · 분석 제외</span>
-                <span>수익 구조 · 분석 제외</span>
+                <span>데이터 확보 가능성 분석 제외</span>
+                <span>시장 현실성 분석 제외</span>
+                <span>수익 구조 분석 제외</span>
               </div>
             </div>
           </div>
