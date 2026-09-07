@@ -153,6 +153,7 @@ export default function ReportPage({ data, expiresAt = null }) {
     marketFeas?.payment_precedent,
   );
   const bmMatchDescription = matchScopeDescription(bm?.match_scope_description, bm?.match_level);
+  const retryInputPath = session.session_id ? `/input?session=${encodeURIComponent(session.session_id)}` : '/input';
 
   function handleTabClick(id) {
     if (isFail && id !== 'r') return;
@@ -317,6 +318,9 @@ export default function ReportPage({ data, expiresAt = null }) {
                 <span>시장 현실성 분석 제외</span>
                 <span>수익 구조 분석 제외</span>
               </div>
+              <button className={styles['fail-guidance-btn']} onClick={() => navigate(retryInputPath)}>
+                <i className="ti ti-edit"></i>아이디어 다시 작성하기
+              </button>
             </div>
           </div>
         )}
@@ -695,21 +699,40 @@ export default function ReportPage({ data, expiresAt = null }) {
         {/* 하단 안내 — 지원금 매칭 유도 (긍정 프레임). 인쇄 시 제외. */}
         {!isPrintMode && (
           <div className={styles['report-footer-cta']}>
-            <div className={styles['footer-cta-text']}>
-              <i className="ti ti-wallet"></i>
-              <span>PDF를 저장하시면 지원금 매칭 서비스도 같이 사용 가능해요!</span>
-            </div>
-            <div className={styles['footer-cta-btns']}>
-              <button className={styles['nav-btn']} onClick={handleSavePdf}>
-                <i className="ti ti-download"></i>PDF 저장
-              </button>
-              <button
-                className={cx(styles, 'nav-btn', 'cta-primary')}
-                onClick={() => navigate('/funding-match')}
-              >
-                지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
-              </button>
-            </div>
+            {isFail ? (
+              <>
+                <div className={styles['footer-cta-text']}>
+                  <i className="ti ti-refresh"></i>
+                  <span>아이디어를 수정해 의료기기 리스크를 낮추면 전체 검진 결과를 다시 확인할 수 있어요.</span>
+                </div>
+                <div className={styles['footer-cta-btns']}>
+                  <button className={styles['nav-btn']} onClick={handleSavePdf}>
+                    <i className="ti ti-download"></i>PDF 저장
+                  </button>
+                  <button className={cx(styles, 'nav-btn', 'cta-primary')} onClick={() => navigate(retryInputPath)}>
+                    다시 검사하기 <i className="ti ti-arrow-right"></i>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles['footer-cta-text']}>
+                  <i className="ti ti-wallet"></i>
+                  <span>PDF를 저장하시면 지원금 매칭 서비스도 같이 사용 가능해요!</span>
+                </div>
+                <div className={styles['footer-cta-btns']}>
+                  <button className={styles['nav-btn']} onClick={handleSavePdf}>
+                    <i className="ti ti-download"></i>PDF 저장
+                  </button>
+                  <button
+                    className={cx(styles, 'nav-btn', 'cta-primary')}
+                    onClick={() => navigate('/funding-match')}
+                  >
+                    지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
