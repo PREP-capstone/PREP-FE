@@ -898,3 +898,310 @@ textarea.blank {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ===== 제안서 자동 작성 (proposal writer) 전용 — 이슈 #(등록예정), API 명세서 §102 반영 ===== */
+
+.steps {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #bbb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step-item .step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.step-item.active {
+  color: #111;
+}
+
+.step-item.active .step-num {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.step-item.done .step-num {
+  background: #2a7a2a;
+  border-color: #2a7a2a;
+  color: #fff;
+}
+
+.step-sep {
+  width: 44px;
+  height: 1px;
+  background: #ddd;
+  margin: 0 12px;
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+
+.type-card {
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 16px 18px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.type-card.selected {
+  border-color: #111;
+  background: #fafafa;
+}
+
+.type-card h3 {
+  margin: 0 0 4px;
+  font-size: 14.5px;
+}
+
+.type-card .type-sub {
+  color: #999;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.type-card p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #777;
+  line-height: 1.55;
+}
+
+.step-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 22px;
+}
+
+.chip-cat {
+  margin-bottom: 14px;
+}
+
+.chip-cat-label {
+  font-size: 11px;
+  color: #bbb;
+  font-weight: 800;
+  margin-bottom: 7px;
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  color: #777;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.chip.active {
+  background: #7c5cd6;
+  border-color: #7c5cd6;
+  color: #fff;
+}
+
+.optional-zone {
+  margin-top: 32px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: #f8f7fd;
+  border: 1.5px solid #e3ddf5;
+}
+
+.optional-zone-head h2 {
+  margin: 0 0 3px;
+  font-size: 15.5px;
+  color: #7c5cd6;
+}
+
+.optional-zone-head p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #8a7fb0;
+}
+
+.optional-empty {
+  font-size: 12.5px;
+  color: #a99fcf;
+  padding: 16px 4px;
+  text-align: center;
+}
+
+.opt-item {
+  background: #fff;
+  border: 1px solid #e3ddf5;
+  border-radius: 9px;
+  padding: 14px 16px;
+  margin-top: 11px;
+}
+
+.opt-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.opt-item-top h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.remove-chip-btn {
+  border: none;
+  background: none;
+  color: #bbb;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: #444;
+}
+
+.check-row input {
+  width: 15px;
+  height: 15px;
+}
+
+.table-field table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+.table-field th {
+  text-align: left;
+  font-size: 11px;
+  color: #999;
+  font-weight: 700;
+  padding: 0 8px 6px;
+}
+
+.table-field td {
+  padding: 3px 8px 3px 0;
+}
+
+.table-field input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.table-add-row {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #7c5cd6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0;
+  font-family: inherit;
+}
+
+.step3-card {
+  padding: 40px;
+  text-align: center;
+}
+
+.step3-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #eef8ee;
+  color: #2a7a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin: 0 auto 18px;
+}
+
+.step3-icon.pending {
+  background: #f0f0f0;
+  color: #999;
+}
+
+.step3-icon.error {
+  background: #fef9ee;
+  color: #8a5a00;
+}
+
+.expiry-banner {
+  display: inline-block;
+  margin: 16px auto 22px;
+  padding: 12px 20px;
+  border-radius: 9px;
+  background: #fef9ee;
+  border: 1px solid #f2e6c8;
+  color: #8a5a00;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step3-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 24px 22px;
+}
+
+.modal-body-text {
+  padding: 0 24px 20px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  text-align: center;
+}

@@ -2,157 +2,331 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
+import {
+  getProposalFieldDefinitions,
+  generateProposal,
+  completeProposal,
+  downloadProposalPdf,
+} from '../api/proposalApi';
+import {
+  TEMPLATE_TYPE_OPTIONS,
+  PROPOSAL_CATEGORY_ORDER,
+  PROPOSAL_FIELD_TYPES,
+  PROPOSAL_REQUIREMENT,
+  PROPOSAL_REPORT_MAX_BYTES,
+} from '../constants/proposalOptions';
 
-const progressRows = [
-  ['사업 개요', '자동 입력'],
-  ['문제 정의', '자동 입력'],
-  ['시장 분석', '자동 입력'],
-  ['수익 모델', '입력 필요'],
-  ['예산 계획', '입력 필요'],
-];
+// CHECKLIST/TABLE 필드의 세부 구성(체크리스트 항목명, 표 컬럼명)은 아직 API 명세서
+// (field-definitions 응답)에 포함돼 있지 않아, 알려진 field_key에 한해 로컬 기본값으로 채운다.
+// TODO: 백엔드와 협의해 이 정보를 field-definitions 응답 자체에 포함하는 방향으로 옮기는 게 맞아 보임.
+const CHECKLIST_ITEMS_BY_KEY = {
+  attachment_checklist: ['사업자등록증', '최근 3개년 재무제표', '국세·지방세 납세증명서', '특허·상표 등록증(해당 시)'],
+};
 
-function formatDate(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}.${month}.${day}`;
+const TABLE_COLUMNS_BY_KEY = {
+  growth_targets: ['연차', '매출(만원)', '고용(명)'],
+  annual_budget_exec: ['연차', '정부출연금', '자기부담금(현금)', '자기부담금(현물)'],
+};
+
+// IR추가 카테고리 칩은 "투자자료용"으로, 그 외 선택 항목은 "사업 내용 보완"으로 묶어 표시한다.
+const INVEST_ONLY_CATEGORY = 'IR추가';
+
+function defaultValueForFieldType(fieldType) {
+  if (fieldType === PROPOSAL_FIELD_TYPES.CHECKLIST) return [];
+  if (fieldType === PROPOSAL_FIELD_TYPES.TABLE) return [];
+  return '';
 }
 
-function createInitialDraft() {
-  return {
-  title: 'AI 기반 지역 관광 콘텐츠 서비스 사업계획서',
-  grantName: '',
-  createdAt: formatDate(),
-  companyName: '',
-  representative: '',
-  overview: '본 사업은 지역 역사문화 자원을 모바일 기반 AR 콘텐츠와 오디오 가이드로 재해석하여, 방문객이 현장에서 몰입형 관광 경험을 할 수 있도록 돕는 서비스입니다.',
-  problem: '지역 문화유산 관광은 정보 전달 방식이 정적이고, 젊은 방문객이 지속적으로 흥미를 느끼기 어렵다는 문제가 있습니다. 또한 방문 이후에도 관광 경험이 기록되거나 공유되는 구조가 부족합니다.',
-  features: 'AR 오버레이, 다국어 오디오 가이드, 역사 인물 도감, 인물 셀카 촬영, 앨범 및 콜라주 저장 기능',
-  customers: '지역 관광객, 역사문화 체험 방문객, 가족 단위 여행객, 외국인 관광객',
-  differentiation: '현장 위치 기반 콘텐츠와 사용자의 사진 기록을 연결해 관광 경험을 개인화합니다.',
-  market: '지역 관광 콘텐츠 시장은 체험형, 기록형, 공유형 서비스 중심으로 확장되고 있습니다. 모바일 기반 관광 안내와 AR 콘텐츠는 방문객의 체류 시간과 재방문 가능성을 높일 수 있습니다.',
-  businessModel: '',
-  budget: '',
-  };
+// ReportPage.jsx의 formatExpiry()와 동일한 포맷(정적 "YYYY-MM-DD HH:MM" 텍스트).
+// 이번 제안서 기능은 BE가 계산한 expires_at을 그대로 표시하는 것이라 프론트가 만료시각을
+// 직접 계산하지 않는다 — 리포트 쪽 reportCache.js의 자체 계산 로직과는 다르다 (팀 확인 완료).
+function formatExpiry(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-const exportOptions = [
-  { value: 'pdf', label: 'PDF로 저장' },
-  { value: 'word', label: 'Word(.doc)로 저장' },
-  { value: 'hangul', label: '한글 호환 HTML로 저장' },
-];
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+function buildSections(fieldDefs, fieldValues) {
+  return fieldDefs.map((field) => {
+    const value = fieldValues[field.field_key];
+    // complete API 예시 응답은 final_text를 문자열로만 보여주고 있어(§5.3), CHECKLIST/TABLE처럼
+    // 구조화된 값은 일단 JSON 문자열로 직렬화해서 보낸다.
+    // TODO: 이 타입 처리(특히 TABLE/CHECKLIST)가 맞는지 API 담당과 확인 필요.
+    const finalText = typeof value === 'string' ? value : JSON.stringify(value ?? '');
+    return { field_key: field.field_key, final_text: finalText };
+  });
 }
 
 export default function ProposalWriterPage() {
   const navigate = useNavigate();
-  const [draft, setDraft] = useState(() => {
+
+  const [step, setStep] = useState('upload'); // 'upload' | 'edit' | 'complete'
+  const [reportFile, setReportFile] = useState(null);
+  const [templateType, setTemplateType] = useState(null);
+  const [uploadError, setUploadError] = useState('');
+
+  const [fieldDefs, setFieldDefs] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [activeOptionalKeys, setActiveOptionalKeys] = useState(() => new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
+
+  const [proposalId, setProposalId] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState('');
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [downloadError, setDownloadError] = useState('');
+
+  const requiredFields = useMemo(
+    () => fieldDefs.filter((f) => f.requirement === PROPOSAL_REQUIREMENT.REQUIRED),
+    [fieldDefs]
+  );
+  const optionalFields = useMemo(
+    () => fieldDefs.filter((f) => f.requirement === PROPOSAL_REQUIREMENT.OPTIONAL),
+    [fieldDefs]
+  );
+
+  const requiredByCategory = useMemo(() => {
+    const grouped = {};
+    requiredFields.forEach((f) => {
+      (grouped[f.category] ||= []).push(f);
+    });
+    return grouped;
+  }, [requiredFields]);
+
+  const categoriesInOrder = useMemo(() => {
+    const known = PROPOSAL_CATEGORY_ORDER.filter((c) => requiredByCategory[c]?.length);
+    // API가 내려준 category 중 로컬 순서 목록에 없는 값이 있으면 뒤에 그대로 붙인다 (누락 방지).
+    const extra = Object.keys(requiredByCategory).filter((c) => !PROPOSAL_CATEGORY_ORDER.includes(c));
+    return [...known, ...extra];
+  }, [requiredByCategory]);
+
+  const optionalByGroup = useMemo(() => {
+    const general = optionalFields.filter((f) => f.category !== INVEST_ONLY_CATEGORY);
+    const invest = optionalFields.filter((f) => f.category === INVEST_ONLY_CATEGORY);
+    return { general, invest };
+  }, [optionalFields]);
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0] ?? null;
+    setUploadError('');
+    if (!file) {
+      setReportFile(null);
+      return;
+    }
+    if (file.type !== 'application/pdf') {
+      setUploadError('PDF 파일만 업로드할 수 있어요.');
+      setReportFile(null);
+      return;
+    }
+    if (file.size > PROPOSAL_REPORT_MAX_BYTES) {
+      setUploadError('파일이 너무 커요. 10MB 이하 PDF로 업로드해주세요.');
+      setReportFile(null);
+      return;
+    }
+    setReportFile(file);
+  }
+
+  async function handleGoToEdit() {
+    if (!reportFile || !templateType) return;
+    setIsGenerating(true);
+    setGenerateError('');
+
     try {
-      const saved = localStorage.getItem('prep-proposal-draft');
-      return saved ? { ...createInitialDraft(), ...JSON.parse(saved) } : createInitialDraft();
-    } catch {
-      return createInitialDraft();
+      const defsRes = await getProposalFieldDefinitions(templateType);
+      const fields = defsRes?.fields ?? [];
+
+      const initialValues = {};
+      fields.forEach((f) => {
+        initialValues[f.field_key] = defaultValueForFieldType(f.field_type);
+      });
+
+      const generated = await generateProposal({ reportFile, templateType, fieldValues: initialValues });
+      setProposalId(generated?.proposal_id ?? null);
+
+      (generated?.sections ?? []).forEach((section) => {
+        if (typeof initialValues[section.field_key] === 'string') {
+          initialValues[section.field_key] = section.generated_text ?? '';
+        }
+      });
+
+      setFieldDefs(fields);
+      setFieldValues(initialValues);
+      setActiveOptionalKeys(new Set());
+      setStep('edit');
+    } catch (err) {
+      setGenerateError(err.message || '초안 생성에 실패했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsGenerating(false);
     }
-  });
-  const [uploadedFileName, setUploadedFileName] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
-  const [exportType, setExportType] = useState('pdf');
-  const [statusMessage, setStatusMessage] = useState('');
+  }
 
-  const htmlDocument = useMemo(() => `
-    <!doctype html>
-    <html lang="ko">
-      <head>
-        <meta charset="utf-8" />
-        <title>${escapeHtml(draft.title || '창업 제안서')}</title>
-        <style>
-          body { font-family: "Noto Sans KR", Arial, sans-serif; color: #111; line-height: 1.7; padding: 36px; }
-          h1 { text-align: center; font-size: 24px; border-bottom: 2px solid #111; padding-bottom: 18px; }
-          table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-          th, td { border: 1px solid #d8d8d8; padding: 10px 12px; font-size: 13px; }
-          th { width: 120px; background: #f5f5f5; }
-          h2 { margin-top: 28px; font-size: 18px; }
-          p { white-space: pre-wrap; }
-          .blank { color: #8a5a00; }
-        </style>
-      </head>
-      <body>
-        <h1>${escapeHtml(draft.title || '창업 제안서')}</h1>
-        <table>
-          <tr><th>지원사업</th><td>${escapeHtml(draft.grantName || '입력 필요')}</td><th>작성일</th><td>${escapeHtml(draft.createdAt)}</td></tr>
-          <tr><th>기업명</th><td>${escapeHtml(draft.companyName || '입력 필요')}</td><th>대표자</th><td>${escapeHtml(draft.representative || '입력 필요')}</td></tr>
-        </table>
-        <h2>1. 사업 개요</h2><p>${escapeHtml(draft.overview)}</p>
-        <h2>2. 문제 정의</h2><p>${escapeHtml(draft.problem)}</p>
-        <h2>3. 서비스 내용</h2>
-        <table>
-          <tr><th>핵심 기능</th><td>${escapeHtml(draft.features)}</td></tr>
-          <tr><th>대상 고객</th><td>${escapeHtml(draft.customers)}</td></tr>
-          <tr><th>차별점</th><td>${escapeHtml(draft.differentiation)}</td></tr>
-        </table>
-        <h2>4. 시장 및 고객 분석</h2><p>${escapeHtml(draft.market)}</p>
-        <h2>5. 수익 모델</h2><p class="${draft.businessModel ? '' : 'blank'}">${escapeHtml(draft.businessModel || '입력 필요')}</p>
-        <h2>6. 예산 계획</h2><p class="${draft.budget ? '' : 'blank'}">${escapeHtml(draft.budget || '입력 필요')}</p>
-      </body>
-    </html>
-  `, [draft]);
+  function updateFieldValue(fieldKey, value) {
+    setFieldValues((current) => ({ ...current, [fieldKey]: value }));
+  }
 
-  const updateDraft = (key, value) => {
-    setDraft((current) => ({ ...current, [key]: value }));
-  };
+  function toggleChecklistItem(fieldKey, item) {
+    setFieldValues((current) => {
+      const list = current[fieldKey] ?? [];
+      const next = list.includes(item) ? list.filter((v) => v !== item) : [...list, item];
+      return { ...current, [fieldKey]: next };
+    });
+  }
 
-  const resetDraft = () => {
-    setDraft(createInitialDraft());
-    localStorage.removeItem('prep-proposal-draft');
-    setStatusMessage('제안서 초안을 초기 상태로 되돌렸습니다.');
-  };
+  function updateTableCell(fieldKey, rowIndex, colIndex, value) {
+    setFieldValues((current) => {
+      const rows = (current[fieldKey] ?? []).map((row) => [...row]);
+      rows[rowIndex][colIndex] = value;
+      return { ...current, [fieldKey]: rows };
+    });
+  }
 
-  const saveDraft = () => {
-    localStorage.setItem('prep-proposal-draft', JSON.stringify(draft));
-    setStatusMessage('현재 브라우저에 제안서 초안을 저장했습니다.');
-  };
+  function addTableRow(fieldKey, colCount) {
+    setFieldValues((current) => {
+      const rows = current[fieldKey] ?? [];
+      return { ...current, [fieldKey]: [...rows, Array(colCount).fill('')] };
+    });
+  }
 
-  const downloadBlob = (content, mimeType, filename) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+  function removeTableRow(fieldKey, rowIndex) {
+    setFieldValues((current) => {
+      const rows = current[fieldKey] ?? [];
+      return { ...current, [fieldKey]: rows.filter((_, i) => i !== rowIndex) };
+    });
+  }
 
-  const exportDraft = () => {
-    if (exportType === 'pdf') {
-      const printWindow = window.open('', '_blank', 'width=960,height=720');
-      if (!printWindow) {
-        setStatusMessage('팝업이 차단되어 PDF 저장 창을 열 수 없습니다.');
-        return;
+  function toggleOptionalChip(fieldKey, fieldType) {
+    setActiveOptionalKeys((current) => {
+      const next = new Set(current);
+      if (next.has(fieldKey)) {
+        next.delete(fieldKey);
+      } else {
+        next.add(fieldKey);
+        setFieldValues((values) => ({ ...values, [fieldKey]: values[fieldKey] ?? defaultValueForFieldType(fieldType) }));
       }
-      printWindow.document.write(htmlDocument);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      setStatusMessage('인쇄 창에서 PDF로 저장을 선택해주세요.');
-      return;
-    }
+      return next;
+    });
+  }
 
-    if (exportType === 'word') {
-      downloadBlob(`\ufeff${htmlDocument}`, 'application/msword;charset=utf-8', 'prep-proposal.doc');
-      setStatusMessage('Word 파일을 다운로드했습니다.');
-      return;
-    }
+  async function handleConfirmComplete() {
+    setShowConfirmModal(false);
+    setIsCompleting(true);
+    setCompleteError('');
+    setStep('complete');
 
-    downloadBlob(`\ufeff${htmlDocument}`, 'text/html;charset=utf-8', 'prep-proposal-hangul-compatible.html');
-    setStatusMessage('한글에서 열 수 있는 HTML 문서를 다운로드했습니다.');
-  };
+    try {
+      const activeFieldDefs = fieldDefs.filter(
+        (f) => f.requirement === PROPOSAL_REQUIREMENT.REQUIRED || activeOptionalKeys.has(f.field_key)
+      );
+      const sections = buildSections(activeFieldDefs, fieldValues);
+      const result = await completeProposal(proposalId, sections);
+      setExpiresAt(result?.expires_at ?? null);
+    } catch (err) {
+      setCompleteError(err.message || '제안서 완료 처리에 실패했어요.');
+    } finally {
+      setIsCompleting(false);
+    }
+  }
+
+  async function handleDownload() {
+    setDownloadError('');
+    try {
+      const blob = await downloadProposalPdf(proposalId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'prep-proposal.pdf';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      // PROPOSAL_NOT_FOUND(404) 등 — "만료되었습니다"류 메시지만 보여주고 별도 화면 이동은 하지 않는다 (팀 결정).
+      setDownloadError(err.message || '제안서를 찾을 수 없거나 만료되었어요.');
+    }
+  }
+
+  function goBackToUpload() {
+    setStep('upload');
+  }
+
+  function renderTextField(field) {
+    const value = fieldValues[field.field_key] ?? '';
+    return (
+      <textarea
+        className={!value ? styles.blank : ''}
+        value={value}
+        placeholder="아직 작성되지 않았어요. 직접 입력해주세요."
+        onChange={(e) => updateFieldValue(field.field_key, e.target.value)}
+      />
+    );
+  }
+
+  function renderChecklistField(field) {
+    const items = CHECKLIST_ITEMS_BY_KEY[field.field_key] ?? [];
+    const checked = fieldValues[field.field_key] ?? [];
+    return (
+      <div className={styles.checklist}>
+        {items.map((item) => (
+          <label className={styles['check-row']} key={item}>
+            <input
+              type="checkbox"
+              checked={checked.includes(item)}
+              onChange={() => toggleChecklistItem(field.field_key, item)}
+            />
+            {item}
+          </label>
+        ))}
+      </div>
+    );
+  }
+
+  function renderTableField(field) {
+    const columns = TABLE_COLUMNS_BY_KEY[field.field_key] ?? ['항목', '값'];
+    const rows = fieldValues[field.field_key] ?? [];
+    return (
+      <div className={styles['table-field']}>
+        <table>
+          <thead>
+            <tr>
+              {columns.map((col) => <th key={col}>{col}</th>)}
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <tr key={rowIndex}>
+                {columns.map((_, colIndex) => (
+                  // eslint-disable-next-line react/no-array-index-key
+                  <td key={colIndex}>
+                    <input
+                      value={row[colIndex] ?? ''}
+                      onChange={(e) => updateTableCell(field.field_key, rowIndex, colIndex, e.target.value)}
+                    />
+                  </td>
+                ))}
+                <td>
+                  <button className={styles['table-add-row']} onClick={() => removeTableRow(field.field_key, rowIndex)}>
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <button className={styles['table-add-row']} onClick={() => addTableRow(field.field_key, columns.length)}>
+          + 행 추가
+        </button>
+      </div>
+    );
+  }
+
+  function renderField(field) {
+    if (field.field_type === PROPOSAL_FIELD_TYPES.CHECKLIST) return renderChecklistField(field);
+    if (field.field_type === PROPOSAL_FIELD_TYPES.TABLE) return renderTableField(field);
+    return renderTextField(field);
+  }
 
   return (
     <div className={styles.page}>
@@ -165,112 +339,241 @@ export default function ProposalWriterPage() {
             </button>
             <span className={styles['topbar-title']}>창업 제안서 자동 작성</span>
           </div>
-          <div className={styles['top-actions']}>
-            <button className={styles.btn} onClick={() => setShowPreview(true)}>미리보기</button>
-            <select className={styles['export-select']} value={exportType} onChange={(e) => setExportType(e.target.value)}>
-              {exportOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-            </select>
-            <button className={`${styles.btn} ${styles.primary}`} onClick={exportDraft}>내보내기</button>
-          </div>
         </header>
 
         <section className={`${styles.workspace} ${styles.wide}`}>
-          <div className={styles['page-head']}>
-            <div>
-              <div className={styles.label}>제안서 작성</div>
-              <h1>제안서 자동 작성</h1>
-              <p className={styles['head-desc']}>
-                리포트 PDF를 업로드하면 아이디어검진 결과에서 채울 수 있는 항목을 사업계획서 형식으로 정리하고, 부족한 항목은 입력 필요 상태로 남깁니다.
-              </p>
+          <div className={styles.steps}>
+            <div className={`${styles['step-item']} ${step === 'upload' ? styles.active : ''} ${step !== 'upload' ? styles.done : ''}`}>
+              <span className={styles['step-num']}>1</span>업로드·유형선택
             </div>
-            <div className={styles['summary-grid']}>
-              <div className={styles['summary-cell']}><span>자동 작성률</span><b>72%</b></div>
-              <div className={styles['summary-cell']}><span>입력 필요</span><b>4개</b></div>
+            <div className={styles['step-sep']} />
+            <div className={`${styles['step-item']} ${step === 'edit' ? styles.active : ''} ${step === 'complete' ? styles.done : ''}`}>
+              <span className={styles['step-num']}>2</span>초안 편집
+            </div>
+            <div className={styles['step-sep']} />
+            <div className={`${styles['step-item']} ${step === 'complete' ? styles.active : ''}`}>
+              <span className={styles['step-num']}>3</span>완료·다운로드
             </div>
           </div>
 
-          <div className={`${styles.layout} ${styles.proposal}`}>
-            <aside className={`${styles.panel} ${styles.side}`}>
-              <h2 className={styles['section-title']}>작성 설정</h2>
+          {step === 'upload' && (
+            <div className={`${styles.panel} ${styles['page-head']}`} style={{ display: 'block' }}>
+              <h1>검진 결과 업로드 및 지원사업 유형 선택</h1>
+              <p className={styles['head-desc']}>아이디어 검진 리포트 PDF를 업로드하고, 작성할 제안서 유형을 선택하세요.</p>
+
               <label className={styles.upload}>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  hidden
-                  onChange={(e) => setUploadedFileName(e.target.files?.[0]?.name ?? '')}
-                />
+                <input type="file" accept="application/pdf" hidden onChange={handleFileChange} />
                 <div className={styles['upload-icon']}>PDF</div>
-                <div className={styles['upload-title']}>리포트 PDF 업로드</div>
-                <div className={styles['upload-text']}>{uploadedFileName || '검진 리포트를 기준으로 제안서 초안을 작성합니다.'}</div>
+                <div className={styles['upload-title']}>{reportFile ? reportFile.name : '검진 리포트 PDF를 업로드하세요'}</div>
+                <div className={styles['upload-text']}>PDF 파일만 가능 · 최대 10MB</div>
               </label>
-              <div className={styles.field}><label>문서 유형</label><select defaultValue="창업 지원사업 사업계획서"><option>창업 지원사업 사업계획서</option><option>정부지원금 제안서</option><option>투자 검토용 제안서</option></select></div>
-              <div className={styles.field}><label>지원사업명</label><input value={draft.grantName} placeholder="입력 필요" onChange={(e) => updateDraft('grantName', e.target.value)} /></div>
-              <div className={styles.field}><label>기업명</label><input value={draft.companyName} placeholder="입력 필요" onChange={(e) => updateDraft('companyName', e.target.value)} /></div>
-              <div className={styles['progress-list']}>
-                {progressRows.map(([label, state]) => (
-                  <div className={styles['progress-row']} key={label}>
-                    {label}
-                    <span className={`${styles.state} ${state === '입력 필요' ? styles.need : ''}`}>{state}</span>
+              {uploadError && <p className={styles.hint}>{uploadError}</p>}
+
+              <div className={styles['type-grid']}>
+                {TEMPLATE_TYPE_OPTIONS.map((option) => (
+                  <div
+                    key={option.value}
+                    className={`${styles['type-card']} ${templateType === option.value ? styles.selected : ''}`}
+                    onClick={() => setTemplateType(option.value)}
+                  >
+                    <h3>{option.label}</h3>
+                    <div className={styles['type-sub']}>{option.sublabel}</div>
+                    <p>{option.description}</p>
                   </div>
                 ))}
               </div>
-              <button className={`${styles.btn} ${styles.primary}`} onClick={resetDraft}>초안 다시 작성</button>
-            </aside>
 
-            <section className={`${styles.panel} ${styles.editor}`}>
-              <div className={styles['content-head']}>
-                <div><h2>제안서 편집</h2><p>자동 작성된 문구를 바로 수정하고 빈칸을 채울 수 있습니다.</p></div>
-                <button className={styles.btn} onClick={() => setShowPreview(true)}>입력 필요 확인</button>
+              {generateError && <p className={styles.hint}>{generateError}</p>}
+
+              <div className={styles['step-footer']}>
+                <span />
+                <button
+                  className={`${styles.btn} ${styles.primary}`}
+                  disabled={!reportFile || !templateType || isGenerating}
+                  onClick={handleGoToEdit}
+                >
+                  {isGenerating ? '초안 생성 중...' : '다음 · 초안 생성'}
+                </button>
               </div>
-              <div className={styles['paper-area']}>
-                <article className={styles.paper}>
-                  {statusMessage && <div className={styles['status-message']}>{statusMessage}</div>}
-                  <div className={styles['doc-title']}><input value={draft.title} onChange={(e) => updateDraft('title', e.target.value)} /></div>
-                  <div className={styles['meta-table']}>
-                    <div className={styles.th}>지원사업</div><div className={`${styles.td} ${!draft.grantName ? styles.blank : ''}`}><input value={draft.grantName} placeholder="입력 필요" onChange={(e) => updateDraft('grantName', e.target.value)} /></div>
-                    <div className={styles.th}>작성일</div><div className={styles.td}><input value={draft.createdAt} onChange={(e) => updateDraft('createdAt', e.target.value)} /></div>
-                    <div className={styles.th}>기업명</div><div className={`${styles.td} ${!draft.companyName ? styles.blank : ''}`}><input value={draft.companyName} placeholder="입력 필요" onChange={(e) => updateDraft('companyName', e.target.value)} /></div>
-                    <div className={styles.th}>대표자</div><div className={`${styles.td} ${!draft.representative ? styles.blank : ''}`}><input value={draft.representative} placeholder="입력 필요" onChange={(e) => updateDraft('representative', e.target.value)} /></div>
-                  </div>
+            </div>
+          )}
 
-                  <section className={styles['doc-section']}><h3><span className={styles.num}>1</span>사업 개요</h3><textarea value={draft.overview} onChange={(e) => updateDraft('overview', e.target.value)} /></section>
-                  <section className={styles['doc-section']}><h3><span className={styles.num}>2</span>문제 정의</h3><textarea value={draft.problem} onChange={(e) => updateDraft('problem', e.target.value)} /></section>
-                  <section className={styles['doc-section']}>
-                    <h3><span className={styles.num}>3</span>서비스 내용</h3>
-                    <div className={styles['doc-table']}>
-                      <div className={styles['doc-row']}><div className={styles['cell-head']}>핵심 기능</div><div className={styles.cell}><textarea value={draft.features} onChange={(e) => updateDraft('features', e.target.value)} /></div></div>
-                      <div className={styles['doc-row']}><div className={styles['cell-head']}>대상 고객</div><div className={styles.cell}><textarea value={draft.customers} onChange={(e) => updateDraft('customers', e.target.value)} /></div></div>
-                      <div className={styles['doc-row']}><div className={styles['cell-head']}>차별점</div><div className={styles.cell}><textarea value={draft.differentiation} onChange={(e) => updateDraft('differentiation', e.target.value)} /></div></div>
+          {step === 'edit' && (
+            <div className={`${styles.layout} ${styles.proposal}`}>
+              <aside className={`${styles.panel} ${styles.side}`}>
+                <h2 className={styles['section-title']}>문서 구성 (필수)</h2>
+                <div className={styles['progress-list']}>
+                  {categoriesInOrder.map((category) => (
+                    <div className={styles['progress-row']} key={category}>
+                      {category}
                     </div>
-                  </section>
-                  <section className={styles['doc-section']}><h3><span className={styles.num}>4</span>시장 및 고객 분석</h3><textarea value={draft.market} onChange={(e) => updateDraft('market', e.target.value)} /></section>
-                  <section className={styles['doc-section']}><h3><span className={styles.num}>5</span>수익 모델</h3><textarea className={!draft.businessModel ? styles.blank : ''} value={draft.businessModel} placeholder="리포트 내용만으로 판단하기 어려워 추가 입력이 필요합니다." onChange={(e) => updateDraft('businessModel', e.target.value)} /><p className={styles.hint}>리포트에 가격 정책과 매출 가정이 없어 입력 필요 상태로 남겼습니다.</p></section>
-                  <section className={styles['doc-section']}><h3><span className={styles.num}>6</span>예산 계획</h3><textarea className={!draft.budget ? styles.blank : ''} value={draft.budget} placeholder="인건비, 외주용역비, 홍보비, 서버 운영비 등을 입력하세요." onChange={(e) => updateDraft('budget', e.target.value)} /><p className={styles.hint}>지원사업 양식에 맞는 세부 금액 입력이 필요합니다.</p></section>
-                  <div className={styles.bottom}>
-                    <button className={styles.btn} onClick={resetDraft}>초기화</button>
-                    <button className={styles.btn} onClick={saveDraft}>저장</button>
-                    <select className={styles['export-select']} value={exportType} onChange={(e) => setExportType(e.target.value)}>
-                      {exportOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-                    </select>
-                    <button className={`${styles.btn} ${styles.primary}`} onClick={exportDraft}>내보내기</button>
+                  ))}
+                </div>
+
+                <h2 className={styles['section-title']} style={{ marginTop: 22 }}>선택 항목 추가하기</h2>
+                {optionalByGroup.general.length > 0 && (
+                  <div className={styles['chip-cat']}>
+                    <div className={styles['chip-cat-label']}>사업 내용 보완</div>
+                    <div className={styles['chip-grid']}>
+                      {optionalByGroup.general.map((field) => (
+                        <span
+                          key={field.field_key}
+                          className={`${styles.chip} ${activeOptionalKeys.has(field.field_key) ? styles.active : ''}`}
+                          onClick={() => toggleOptionalChip(field.field_key, field.field_type)}
+                        >
+                          {field.label}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </article>
-              </div>
-            </section>
-          </div>
+                )}
+                {optionalByGroup.invest.length > 0 && (
+                  <div className={styles['chip-cat']}>
+                    <div className={styles['chip-cat-label']}>투자자료용</div>
+                    <div className={styles['chip-grid']}>
+                      {optionalByGroup.invest.map((field) => (
+                        <span
+                          key={field.field_key}
+                          className={`${styles.chip} ${activeOptionalKeys.has(field.field_key) ? styles.active : ''}`}
+                          onClick={() => toggleOptionalChip(field.field_key, field.field_type)}
+                        >
+                          {field.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </aside>
+
+              <section className={`${styles.panel} ${styles.editor}`}>
+                <div className={styles['content-head']}>
+                  <div>
+                    <h2>제안서 편집</h2>
+                    <p>빈칸(옅은 주황색)만 직접 채우면 됩니다. 나머지는 AI 초안이 반영되어 있습니다.</p>
+                  </div>
+                </div>
+
+                <div className={styles['paper-area']}>
+                  <article className={styles.paper}>
+                    {categoriesInOrder.map((category, idx) => (
+                      <section className={styles['doc-section']} key={category}>
+                        <h3><span className={styles.num}>{idx + 1}</span>{category}</h3>
+                        {requiredByCategory[category].map((field) => (
+                          <div key={field.field_key} style={{ marginBottom: 16 }}>
+                            <p style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 6 }}>{field.label}</p>
+                            {renderField(field)}
+                          </div>
+                        ))}
+                      </section>
+                    ))}
+
+                    <div className={styles['optional-zone']}>
+                      <div className={styles['optional-zone-head']}>
+                        <h2>선택 항목</h2>
+                        <p>왼쪽에서 추가한 항목이 여기 나타납니다.</p>
+                      </div>
+                      {activeOptionalKeys.size === 0 && (
+                        <div className={styles['optional-empty']}>아직 추가된 선택 항목이 없습니다.</div>
+                      )}
+                      {optionalFields
+                        .filter((field) => activeOptionalKeys.has(field.field_key))
+                        .map((field) => (
+                          <div className={styles['opt-item']} key={field.field_key}>
+                            <div className={styles['opt-item-top']}>
+                              <h4>{field.label}</h4>
+                              <button
+                                className={styles['remove-chip-btn']}
+                                onClick={() => toggleOptionalChip(field.field_key, field.field_type)}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            {renderField(field)}
+                          </div>
+                        ))}
+                    </div>
+
+                    <div className={styles.bottom}>
+                      <button className={styles.btn} onClick={goBackToUpload}>← 이전</button>
+                      <button className={`${styles.btn} ${styles.primary}`} onClick={() => setShowConfirmModal(true)}>
+                        완료 · PDF 저장하기
+                      </button>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {step === 'complete' && (
+            <div className={`${styles.panel} ${styles['step3-card']}`}>
+              {isCompleting && (
+                <>
+                  <div className={`${styles['step3-icon']} ${styles.pending}`}>⏳</div>
+                  <h1>제안서 PDF를 생성하고 있습니다</h1>
+                  <p style={{ color: '#888', fontSize: 13.5 }}>잠시만 기다려주세요.</p>
+                </>
+              )}
+
+              {!isCompleting && completeError && (
+                <>
+                  <div className={`${styles['step3-icon']} ${styles.error}`}>!</div>
+                  <h1>완료 처리에 실패했어요</h1>
+                  <p style={{ color: '#888', fontSize: 13.5 }}>{completeError}</p>
+                  <div className={styles['step3-actions']}>
+                    <button className={`${styles.btn} ${styles.primary}`} onClick={() => setShowConfirmModal(true)}>
+                      다시 시도
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {!isCompleting && !completeError && !downloadError && (
+                <>
+                  <div className={styles['step3-icon']}>✓</div>
+                  <h1>제안서 PDF가 준비되었습니다</h1>
+                  <p style={{ color: '#888', fontSize: 13.5 }}>서버에는 임시로만 보관되며, 시간이 지나면 자동으로 삭제됩니다.</p>
+                  <div className={styles['expiry-banner']}>⏱ {formatExpiry(expiresAt)}까지 다운로드 가능</div>
+                  <div className={styles['step3-actions']}>
+                    <button className={`${styles.btn} ${styles.primary}`} onClick={handleDownload}>PDF 다운로드</button>
+                  </div>
+                </>
+              )}
+
+              {!isCompleting && !completeError && downloadError && (
+                <>
+                  <div className={`${styles['step3-icon']} ${styles.error}`}>!</div>
+                  <h1>만료되었습니다</h1>
+                  <p style={{ color: '#888', fontSize: 13.5 }}>{downloadError}</p>
+                  <div className={styles['step3-actions']}>
+                    <button className={`${styles.btn} ${styles.primary}`} onClick={() => navigate('/')}>메인으로 가기</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </section>
       </main>
-      {showPreview && (
-        <div className={styles.overlay} role="presentation" onClick={() => setShowPreview(false)}>
-          <section className={styles.modal} role="dialog" aria-modal="true" aria-label="제안서 미리보기" onClick={(e) => e.stopPropagation()}>
+
+      {showConfirmModal && (
+        <div className={styles.overlay} role="presentation" onClick={() => setShowConfirmModal(false)}>
+          <section
+            className={`${styles.modal} ${styles.small}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="제안서 완료 확인"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className={styles['modal-head']}>
-              <div>
-                <div className={styles.label}>미리보기</div>
-                <h2>제안서 미리보기</h2>
-              </div>
-              <button className={styles.btn} onClick={() => setShowPreview(false)}>닫기</button>
+              <h2>제안서를 완료할까요?</h2>
             </div>
-            <iframe className={styles.preview} title="제안서 미리보기" srcDoc={htmlDocument} />
+            <p className={styles['modal-body-text']}>
+              완료 버튼을 누르면 더 이상 수정할 수 없습니다.<br />내용을 다시 확인하셨나요?
+            </p>
+            <div className={styles['modal-actions']}>
+              <button className={styles.btn} onClick={() => setShowConfirmModal(false)}>취소</button>
+              <button className={`${styles.btn} ${styles.primary}`} onClick={handleConfirmComplete}>완료하기</button>
+            </div>
           </section>
         </div>
       )}
