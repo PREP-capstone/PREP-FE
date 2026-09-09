@@ -743,6 +743,11 @@ textarea.blank {
   width: min(620px, 100%);
 }
 
+.modal.scrollable {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .modal-head {
   display: flex;
   align-items: flex-start;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
@@ -59,6 +59,17 @@ export default function FundingMatchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    if (!selectedGrant) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedGrant]);
 
   const findFunding = async () => {
     if (!reportFile) {
@@ -240,7 +251,7 @@ export default function FundingMatchPage() {
       </main>
       {selectedGrant && (
         <div className={styles.overlay} role="presentation" onClick={() => setSelectedGrant(null)}>
-          <section className={`${styles.modal} ${styles.small}`} role="dialog" aria-modal="true" aria-label="지원사업 상세보기" onClick={(e) => e.stopPropagation()}>
+          <section className={`${styles.modal} ${styles.small} ${styles.scrollable}`} role="dialog" aria-modal="true" aria-label="지원사업 상세보기" onClick={(e) => e.stopPropagation()}>
             <div className={styles['modal-head']}>
               <div>
                 <div className={styles.label}>지원사업 상세</div>
