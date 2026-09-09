@@ -45,9 +45,9 @@ export default function FundingMatchPage() {
   const navigate = useNavigate();
 
   const [reportFile, setReportFile] = useState(null);
-  const [region, setRegion] = useState('충남 부여군');
-  const [startupStage, setStartupStage] = useState('예비창업');
-  const [keywordsText, setKeywordsText] = useState('관광, AI, 모바일, AR');
+  const [region, setRegion] = useState('');
+  const [startupStage, setStartupStage] = useState('');
+  const [keywordsText, setKeywordsText] = useState('');
 
   const [showCriteria, setShowCriteria] = useState(false);
   const [selectedGrant, setSelectedGrant] = useState(null);
@@ -67,6 +67,12 @@ export default function FundingMatchPage() {
     }
     setIsLoading(true);
     setLoadError(null);
+    // 새 요청을 시작하면 이전 결과부터 비운다 — 실패해도 지난 추천이 최신 결과처럼 남아있지 않도록.
+    setRecommendations([]);
+    setRecommendedAt(null);
+    setExtractedProfile(null);
+    setSourceWarnings([]);
+    setHasSearched(false);
     try {
       const result = await getFundingRecommendations({
         file: reportFile,
@@ -154,12 +160,13 @@ export default function FundingMatchPage() {
               <div className={styles.field}>
                 <label>사업 단계</label>
                 <select value={startupStage} onChange={(e) => setStartupStage(e.target.value)}>
+                  <option value="">선택 안 함</option>
                   {STARTUP_STAGES.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
                 </select>
               </div>
               <div className={styles.field}>
                 <label>지역</label>
-                <input value={region} onChange={(e) => setRegion(e.target.value)} />
+                <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="예: 충남 부여군 (입력 안 하면 PDF에서 자동 인식)" />
               </div>
               <div className={styles.field}>
                 <label>주요 키워드</label>
