@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
@@ -31,6 +31,57 @@ function targetLabel(item) {
   return [item.stage, item.region].filter(Boolean).join(' · ') || '지원대상 정보 없음';
 }
 
+function cleanText(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function includesAny(text, words) {
+  return words.some((word) => text.includes(word));
+}
+
+function summarizeDescription(grant) {
+  const text = cleanText([grant.title, grant.description, ...(grant.keywords ?? [])].filter(Boolean).join(' '));
+  if (!text) return '지원사업 핵심 내용은 상세보기에서 확인해주세요.';
+
+  const focusRules = [
+    { words: ['마케팅', '홍보', '판로', '브랜드'], label: '마케팅·판로 지원 프로그램' },
+    { words: ['사업화', '시제품', '제품 개발', '제품개발', '시장진출'], label: '사업화 지원 프로그램' },
+    { words: ['기술개발', 'R&D', '연구개발', '실증', 'PoC'], label: '기술개발·실증 지원 프로그램' },
+    { words: ['관광', '콘텐츠', '문화'], label: '관광·콘텐츠 분야 창업 지원 프로그램' },
+    { words: ['멘토링', '컨설팅', '교육', '액셀러레이팅'], label: '교육·멘토링 지원 프로그램' },
+    { words: ['입주', '공간', '센터'], label: '입주공간·보육 지원 프로그램' },
+    { words: ['청년'], label: '청년 창업 지원 프로그램' },
+    { words: ['재창업'], label: '재창업 지원 프로그램' },
+  ];
+
+  const focus = focusRules.find((rule) => includesAny(text, rule.words))?.label || '창업기업 성장 지원 프로그램';
+  const target = summarizeTarget(grant);
+  const region = grant.region ? `${grant.region} 기준 ` : '';
+
+  if (target === '지원대상 확인 필요') return `${region}${focus}`;
+  return `${region}${target} 대상 ${focus}`;
+}
+
+function summarizeTarget(item) {
+  const text = cleanText(targetLabel(item));
+  if (!text || text === '지원대상 정보 없음') return '지원대상 확인 필요';
+
+  const labels = [];
+  if (text.includes('예비창업')) labels.push('예비창업자');
+  if (text.includes('초기창업')) labels.push('초기 창업기업');
+  if (text.includes('창업도약')) labels.push('도약기 창업기업');
+  if (text.includes('재창업')) labels.push('재창업자');
+  if (text.includes('청년')) labels.push('청년');
+  if (text.includes('중소기업')) labels.push('중소기업');
+  if (text.includes('소상공인')) labels.push('소상공인');
+  if (text.includes('스타트업')) labels.push('스타트업');
+
+  if (labels.length > 0) return [...new Set(labels)].slice(0, 3).join('·');
+  if (item.stage) return cleanText(item.stage).split(/[,.·/]/)[0];
+  if (item.region) return cleanText(item.region);
+  return '지원대상 확인 필요';
+}
+
 /** recommended_at(ISO8601) → "2026.09.07 16:32" 형태로 변환. 파싱 실패 시 null. */
 function formatRecommendedAt(recommendedAt) {
   if (!recommendedAt) return null;
@@ -59,6 +110,17 @@ export default function FundingMatchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    if (!selectedGrant) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedGrant]);
 
   const findFunding = async () => {
     if (!reportFile) {
@@ -119,7 +181,7 @@ export default function FundingMatchPage() {
           </div>
         </header>
 
-        <section className={styles.workspace}>
+        <section className={`${styles.workspace} ${styles['funding-workspace']}`}>
           <div className={styles['page-head']}>
             <div>
               <div className={styles.label}>지원금 매칭</div>
@@ -134,7 +196,7 @@ export default function FundingMatchPage() {
             </div>
           </div>
 
-          <div className={styles.layout}>
+          <div className={`${styles.layout} ${styles['funding-layout']}`}>
             <aside className={`${styles.panel} ${styles.side}`}>
               <h2 className={styles['section-title']}>분석 입력</h2>
               <div className={styles['report-chip']}>
@@ -181,7 +243,7 @@ export default function FundingMatchPage() {
               )}
             </aside>
 
-            <section className={`${styles.panel} ${styles.content}`}>
+            <section className={`${styles.panel} ${styles.content} ${styles['funding-results']}`}>
               <div className={styles['content-head']}>
                 <div>
                   <h2>추천 지원사업 리스트</h2>
@@ -214,7 +276,7 @@ export default function FundingMatchPage() {
                   <article className={styles.grant} key={grant.program_id}>
                     <div>
                       <div className={styles['grant-title']}>{grant.title}</div>
-                      <div className={styles['grant-desc']}>{grant.description}</div>
+                      <div className={styles['grant-desc']}>{summarizeDescription(grant)}</div>
                       <div className={styles.badges}>
                         {[...grant.keywords.slice(0, 3), ddayLabel(grant.deadline, grant.days_left)].map((tag) => (
                           <span className={`${styles.badge} ${tag.includes('남음') || tag.includes('마감') ? styles.warn : ''}`} key={tag}>{tag}</span>
@@ -223,7 +285,7 @@ export default function FundingMatchPage() {
                     </div>
                     <div className={styles.match}>{grant.match_score}%</div>
                     <div className={styles['cell-main']}>{formatDeadline(grant.deadline)}<span className={styles['cell-sub']}>{ddayLabel(grant.deadline, grant.days_left)}</span></div>
-                    <div className={styles['cell-main']}>{amountLabel(grant)}<span className={styles['cell-sub']}>{targetLabel(grant)}</span></div>
+                    <div className={styles['cell-main']}>{amountLabel(grant)}<span className={styles['cell-sub']}>{summarizeTarget(grant)}</span></div>
                     <div className={styles['row-actions']}>
                       <button className={styles.btn} onClick={() => setSelectedGrant(grant)}>상세보기</button>
                     </div>
@@ -240,7 +302,7 @@ export default function FundingMatchPage() {
       </main>
       {selectedGrant && (
         <div className={styles.overlay} role="presentation" onClick={() => setSelectedGrant(null)}>
-          <section className={`${styles.modal} ${styles.small}`} role="dialog" aria-modal="true" aria-label="지원사업 상세보기" onClick={(e) => e.stopPropagation()}>
+          <section className={`${styles.modal} ${styles.wideModal} ${styles.scrollable}`} role="dialog" aria-modal="true" aria-label="지원사업 상세보기" onClick={(e) => e.stopPropagation()}>
             <div className={styles['modal-head']}>
               <div>
                 <div className={styles.label}>지원사업 상세</div>
@@ -262,7 +324,7 @@ export default function FundingMatchPage() {
               </div>
             )}
             {selectedGrant.source_url && (
-              <a className={styles.btn} href={selectedGrant.source_url} target="_blank" rel="noreferrer">
+              <a className={`${styles.btn} ${styles['source-link']}`} href={selectedGrant.source_url} target="_blank" rel="noreferrer">
                 공고 원문 보기
               </a>
             )}
