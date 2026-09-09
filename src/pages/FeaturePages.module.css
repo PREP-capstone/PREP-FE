@@ -756,7 +756,7 @@ textarea.blank {
 }
 
 .modal.wideModal {
-  width: min(860px, calc(100vw - 72px));
+  width: min(1080px, calc(100vw - 72px));
 }
 
 .modal.scrollable {
@@ -793,6 +793,10 @@ textarea.blank {
   grid-template-columns: repeat(4, 1fr);
   border-bottom: 1px solid #e8e8e8;
   background: #fafafa;
+}
+
+.wideModal .detail-grid {
+  grid-template-columns: 0.8fr 0.95fr 1.4fr 1.25fr;
 }
 
 .detail-grid div {
