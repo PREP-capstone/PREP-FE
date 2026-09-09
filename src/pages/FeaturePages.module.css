@@ -755,6 +755,10 @@ textarea.blank {
   width: min(620px, 100%);
 }
 
+.modal.wideModal {
+  width: min(860px, calc(100vw - 72px));
+}
+
 .modal.scrollable {
   overflow-y: auto;
   overscroll-behavior: contain;
