@@ -324,7 +324,7 @@ export default function FundingMatchPage() {
               </div>
             )}
             {selectedGrant.source_url && (
-              <a className={styles.btn} href={selectedGrant.source_url} target="_blank" rel="noreferrer">
+              <a className={`${styles.btn} ${styles['source-link']}`} href={selectedGrant.source_url} target="_blank" rel="noreferrer">
                 공고 원문 보기
               </a>
             )}
