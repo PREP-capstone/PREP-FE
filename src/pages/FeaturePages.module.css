@@ -757,6 +757,8 @@ textarea.blank {
 
 .modal.wideModal {
   width: min(1080px, calc(100vw - 72px));
+  min-height: min(720px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
 }
 
 .modal.scrollable {
