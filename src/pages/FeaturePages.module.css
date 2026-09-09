@@ -507,6 +507,19 @@
   line-height: 1.55;
 }
 
+.status-message.error {
+  border-color: #f2d3d3;
+  background: #fdf4f4;
+  color: #b23c3c;
+}
+
+.status-message.basis {
+  border-color: #d9e6f2;
+  background: #f4f8fd;
+  color: #2f5f8a;
+  font-weight: 600;
+}
+
 .progress-list {
   margin-top: 18px;
   border-top: 1px solid #eee;

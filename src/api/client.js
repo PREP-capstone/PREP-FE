@@ -15,12 +15,16 @@ async function request(path, { method = 'GET', body, headers, timeoutMs = 20000 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  // FormData(파일 업로드 등)는 JSON으로 감싸지 않고 그대로 보낸다.
+  // Content-Type도 직접 지정하지 않아야 브라우저가 multipart boundary를 채워서 붙여준다.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
   let res;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: isFormData ? { ...headers } : { 'Content-Type': 'application/json', ...headers },
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal: controller.signal,
     });
   } catch (err) {
