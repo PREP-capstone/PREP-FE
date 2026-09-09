@@ -45,7 +45,7 @@ function summarizeDescription(grant) {
 
   const focusRules = [
     { words: ['마케팅', '홍보', '판로', '브랜드'], label: '마케팅·판로 지원 프로그램' },
-    { words: ['사업화', '시제품', '제품 개발', '제품개발', '시장진출'], label: '사업화 자금 지원 프로그램' },
+    { words: ['사업화', '시제품', '제품 개발', '제품개발', '시장진출'], label: '사업화 지원 프로그램' },
     { words: ['기술개발', 'R&D', '연구개발', '실증', 'PoC'], label: '기술개발·실증 지원 프로그램' },
     { words: ['관광', '콘텐츠', '문화'], label: '관광·콘텐츠 분야 창업 지원 프로그램' },
     { words: ['멘토링', '컨설팅', '교육', '액셀러레이팅'], label: '교육·멘토링 지원 프로그램' },
@@ -243,7 +243,7 @@ export default function FundingMatchPage() {
               )}
             </aside>
 
-            <section className={`${styles.panel} ${styles.content}`}>
+            <section className={`${styles.panel} ${styles.content} ${styles['funding-results']}`}>
               <div className={styles['content-head']}>
                 <div>
                   <h2>추천 지원사업 리스트</h2>

@@ -188,6 +188,31 @@
   grid-template-columns: 284px minmax(0, 1fr);
 }
 
+.funding-results {
+  min-width: 0;
+  container-type: inline-size;
+  container-name: funding-results;
+}
+
+@container funding-results (max-width: 860px) {
+  .funding-results .table-head {
+    display: none;
+  }
+
+  .funding-results .grant {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .funding-results .grant > div {
+    border-right: 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .funding-results .grant > div:last-child {
+    border-bottom: 0;
+  }
+}
+
 .layout.proposal {
   grid-template-columns: 300px 1fr;
 }
@@ -939,7 +964,8 @@ textarea.blank {
     padding: 18px;
   }
 
-  .detail-grid {
+  .detail-grid,
+  .wideModal .detail-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
