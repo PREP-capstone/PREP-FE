@@ -31,6 +31,15 @@ function targetLabel(item) {
   return [item.stage, item.region].filter(Boolean).join(' · ') || '지원대상 정보 없음';
 }
 
+function summarizeDescription(description) {
+  if (!description) return '상세 설명은 상세보기에서 확인해주세요.';
+
+  const compact = String(description).replace(/\s+/g, ' ').trim();
+  if (compact.length <= 90) return compact;
+
+  return `${compact.slice(0, 90)}...`;
+}
+
 /** recommended_at(ISO8601) → "2026.09.07 16:32" 형태로 변환. 파싱 실패 시 null. */
 function formatRecommendedAt(recommendedAt) {
   if (!recommendedAt) return null;
@@ -130,7 +139,7 @@ export default function FundingMatchPage() {
           </div>
         </header>
 
-        <section className={styles.workspace}>
+        <section className={`${styles.workspace} ${styles['funding-workspace']}`}>
           <div className={styles['page-head']}>
             <div>
               <div className={styles.label}>지원금 매칭</div>
@@ -145,7 +154,7 @@ export default function FundingMatchPage() {
             </div>
           </div>
 
-          <div className={styles.layout}>
+          <div className={`${styles.layout} ${styles['funding-layout']}`}>
             <aside className={`${styles.panel} ${styles.side}`}>
               <h2 className={styles['section-title']}>분석 입력</h2>
               <div className={styles['report-chip']}>
@@ -225,7 +234,7 @@ export default function FundingMatchPage() {
                   <article className={styles.grant} key={grant.program_id}>
                     <div>
                       <div className={styles['grant-title']}>{grant.title}</div>
-                      <div className={styles['grant-desc']}>{grant.description}</div>
+                      <div className={styles['grant-desc']}>{summarizeDescription(grant.description)}</div>
                       <div className={styles.badges}>
                         {[...grant.keywords.slice(0, 3), ddayLabel(grant.deadline, grant.days_left)].map((tag) => (
                           <span className={`${styles.badge} ${tag.includes('남음') || tag.includes('마감') ? styles.warn : ''}`} key={tag}>{tag}</span>

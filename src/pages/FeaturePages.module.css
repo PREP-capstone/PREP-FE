@@ -99,6 +99,10 @@
   padding: 44px 0 96px;
 }
 
+.funding-workspace {
+  width: min(1380px, calc(100% - 56px));
+}
+
 .wide {
   width: min(1180px, calc(100% - 72px));
 }
@@ -178,6 +182,10 @@
   grid-template-columns: 304px 1fr;
   gap: 18px;
   align-items: start;
+}
+
+.funding-layout {
+  grid-template-columns: 284px minmax(0, 1fr);
 }
 
 .layout.proposal {
@@ -354,7 +362,7 @@
 .table-head,
 .grant {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 92px 112px 124px 132px;
+  grid-template-columns: minmax(360px, 1.8fr) 94px minmax(112px, 0.5fr) minmax(168px, 0.8fr) 118px;
   align-items: stretch;
 }
 
@@ -409,6 +417,10 @@
   color: #666;
   font-size: 12.5px;
   line-height: 1.55;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .badges {
