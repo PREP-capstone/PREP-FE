@@ -41,8 +41,12 @@ function defaultValueForFieldType(fieldType) {
 // 이번 제안서 기능은 BE가 계산한 expires_at을 그대로 표시하는 것이라 프론트가 만료시각을
 // 직접 계산하지 않는다 — 리포트 쪽 reportCache.js의 자체 계산 로직과는 다르다 (팀 확인 완료).
 function formatExpiry(value) {
+  // [리뷰 P2 반영] new Date(null)은 예외 없이 1970-01-01(epoch)로 계산돼버려서,
+  // expiresAt이 null/undefined로 온 경우에도 그럴듯하지만 틀린 날짜를 보여줄 위험이 있었다.
+  // null/undefined와 파싱 불가능한 값은 모두 null을 반환해, 호출부에서 fallback 문구로 대체한다.
+  if (value === null || value === undefined || value === '') return null;
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
+  if (Number.isNaN(d.getTime())) return null;
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
@@ -77,6 +81,7 @@ export default function ProposalWriterPage() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeError, setCompleteError] = useState('');
   const [expiresAt, setExpiresAt] = useState(null);
+  const expiryLabel = useMemo(() => formatExpiry(expiresAt), [expiresAt]);
   const [downloadError, setDownloadError] = useState('');
 
   const requiredFields = useMemo(
@@ -214,7 +219,10 @@ export default function ProposalWriterPage() {
     setShowConfirmModal(false);
     setIsCompleting(true);
     setCompleteError('');
-    setStep('complete');
+    // [리뷰 P1 반영] setStep('complete')를 API 호출 전에 먼저 부르면, complete가 4xx로
+    // 실패해도 사용자가 이미 완료 화면으로 넘어가버려 편집 화면으로 돌아갈 수 없었다.
+    // 이제 성공했을 때만 'complete' 스텝으로 이동하고, 실패하면 edit 스텝에 머물러
+    // completeError를 보여주면서 내용을 고쳐 다시 완료를 시도할 수 있게 한다.
 
     try {
       const activeFieldDefs = fieldDefs.filter(
@@ -223,8 +231,9 @@ export default function ProposalWriterPage() {
       const sections = buildSections(activeFieldDefs, fieldValues);
       const result = await completeProposal(proposalId, sections);
       setExpiresAt(result?.expires_at ?? null);
+      setStep('complete');
     } catch (err) {
-      setCompleteError(err.message || '제안서 완료 처리에 실패했어요.');
+      setCompleteError(err.message || '제안서 완료 처리에 실패했어요. 내용을 확인하고 다시 시도해주세요.');
     } finally {
       setIsCompleting(false);
     }
@@ -493,10 +502,17 @@ export default function ProposalWriterPage() {
                         ))}
                     </div>
 
+                    {completeError && (
+                      <p style={{ color: '#b8590a', fontSize: 12.5, marginBottom: 10 }}>{completeError}</p>
+                    )}
                     <div className={styles.bottom}>
-                      <button className={styles.btn} onClick={goBackToUpload}>← 이전</button>
-                      <button className={`${styles.btn} ${styles.primary}`} onClick={() => setShowConfirmModal(true)}>
-                        완료 · PDF 저장하기
+                      <button className={styles.btn} onClick={goBackToUpload} disabled={isCompleting}>← 이전</button>
+                      <button
+                        className={`${styles.btn} ${styles.primary}`}
+                        onClick={() => setShowConfirmModal(true)}
+                        disabled={isCompleting}
+                      >
+                        {isCompleting ? '처리 중...' : '완료 · PDF 저장하기'}
                       </button>
                     </div>
                   </article>
@@ -507,40 +523,27 @@ export default function ProposalWriterPage() {
 
           {step === 'complete' && (
             <div className={`${styles.panel} ${styles['step3-card']}`}>
-              {isCompleting && (
-                <>
-                  <div className={`${styles['step3-icon']} ${styles.pending}`}>⏳</div>
-                  <h1>제안서 PDF를 생성하고 있습니다</h1>
-                  <p style={{ color: '#888', fontSize: 13.5 }}>잠시만 기다려주세요.</p>
-                </>
-              )}
-
-              {!isCompleting && completeError && (
-                <>
-                  <div className={`${styles['step3-icon']} ${styles.error}`}>!</div>
-                  <h1>완료 처리에 실패했어요</h1>
-                  <p style={{ color: '#888', fontSize: 13.5 }}>{completeError}</p>
-                  <div className={styles['step3-actions']}>
-                    <button className={`${styles.btn} ${styles.primary}`} onClick={() => setShowConfirmModal(true)}>
-                      다시 시도
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {!isCompleting && !completeError && !downloadError && (
+              {/* [리뷰 P1 반영] 이 스텝은 complete API가 성공했을 때만 진입하므로,
+                  여기서는 더 이상 '생성 중'/'완료 실패' 상태를 다룰 필요가 없다. */}
+              {!downloadError && (
                 <>
                   <div className={styles['step3-icon']}>✓</div>
                   <h1>제안서 PDF가 준비되었습니다</h1>
                   <p style={{ color: '#888', fontSize: 13.5 }}>서버에는 임시로만 보관되며, 시간이 지나면 자동으로 삭제됩니다.</p>
-                  <div className={styles['expiry-banner']}>⏱ {formatExpiry(expiresAt)}까지 다운로드 가능</div>
+                  {expiryLabel ? (
+                    <div className={styles['expiry-banner']}>⏱ {expiryLabel}까지 다운로드 가능</div>
+                  ) : (
+                    // [리뷰 P2 반영] expiresAt이 null/undefined로 오는 경우 형식이 깨진 문구를
+                    // 그대로 보여주지 않고, 별도의 안내 문구로 대체한다.
+                    <div className={styles['expiry-banner']}>⏱ 완료 시점 기준 일정 시간 동안만 다운로드할 수 있어요</div>
+                  )}
                   <div className={styles['step3-actions']}>
                     <button className={`${styles.btn} ${styles.primary}`} onClick={handleDownload}>PDF 다운로드</button>
                   </div>
                 </>
               )}
 
-              {!isCompleting && !completeError && downloadError && (
+              {downloadError && (
                 <>
                   <div className={`${styles['step3-icon']} ${styles.error}`}>!</div>
                   <h1>만료되었습니다</h1>
