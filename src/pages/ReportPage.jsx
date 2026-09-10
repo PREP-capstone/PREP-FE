@@ -485,6 +485,10 @@ export default function ReportPage({ data, expiresAt = null }) {
                     데이터 확보 난이도 점수: <b>{dataFeas.data_feasibility_score ?? '-'}</b> / 30점
                     {dataLevel && <> · {dataDifficultyLabel(dataLevel)}</>}
                   </div>
+                  <div className={styles.ground} style={{ marginBottom: 14 }}>
+                    데이터 확보 난이도: <b>{dataLevel ? dataDifficultyLabel(dataLevel) : '확인 필요'}</b>
+                    <span> / 개인정보 민감도: <b>{({ LOW: '낮음', MEDIUM: '중간', HIGH: '높음' })[dataFeas.privacy_level] ?? '확인 필요'}</b></span>
+                  </div>
 
                   <div className={styles['score-guide']}>
                     <div className={styles['score-head']}>
@@ -531,12 +535,12 @@ export default function ReportPage({ data, expiresAt = null }) {
 
                   {(dataFeas.privacy_risks?.length ?? 0) > 0 && (
                     <>
-                      <div className={styles['sub-title']} style={{ marginTop: 18 }}>개인정보 리스크</div>
+                      <div className={styles['sub-title']} style={{ marginTop: 18 }}>개인정보 처리 주의사항</div>
                       <div className={styles.grounds}>
                         {dataFeas.privacy_risks.map((r, i) => (
                           <div key={i} className={styles.ground}>
-                            <div className={cx(styles, 'g-dot', 'high')}></div>
-                            <b>{r.data_name}</b> — {r.reason}
+                            <b>{r.data_name}</b> — {r.reason || '개인정보 처리 기준 확인 필요'}
+                            {r.sensitivity_level == null && r.reason && <span> (개인정보 처리 기준 확인 필요)</span>}
                           </div>
                         ))}
                       </div>

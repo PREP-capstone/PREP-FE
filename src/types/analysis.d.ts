@@ -135,6 +135,9 @@ export interface RegulatoryRiskResult {
 export interface DataFeasibilityResult {
   data_feasibility_score?: number;
   risk_level?: 'LOW' | 'MEDIUM' | 'HIGH';
+  privacy_score?: number | null;
+  privacy_level?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+  privacy_grade?: string | null;
   available_sources?: Array<{
     data_name?: string;
     source_type?: 'public_api' | 'external_api';
@@ -142,6 +145,7 @@ export interface DataFeasibilityResult {
   }>;
   privacy_risks?: Array<{
     data_name?: string;
+    sensitivity_level?: number | null;
     reason?: string;
   }>;
   standard_scale_candidates?: Array<{
