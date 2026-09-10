@@ -1,5 +1,16 @@
 import { apiClient, unwrap } from './client';
 
+export async function getSessionFundingRecommendations({ sessionId, region, startupStage, keywords, topK = 12 }) {
+  const res = await apiClient.post('/api/v1/funding/recommendations/from-session', {
+    session_id: sessionId,
+    ...(region ? { region } : {}),
+    ...(startupStage ? { startup_stage: startupStage } : {}),
+    ...(keywords?.length ? { keywords } : {}),
+    top_k: topK,
+  });
+  return unwrap(res);
+}
+
 /**
  * POST /api/v1/funding/recommendations (multipart/form-data)
  * — app/api/funding.py 기준.

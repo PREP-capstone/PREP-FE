@@ -730,7 +730,7 @@ export default function ReportPage({ data, expiresAt = null }) {
                   </button>
                   <button
                     className={cx(styles, 'nav-btn', 'cta-primary')}
-                    onClick={() => navigate('/funding-match')}
+                    onClick={() => navigate(session.session_id ? `/funding-match?session=${encodeURIComponent(session.session_id)}` : '/funding-match')}
                   >
                     지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
                   </button>
