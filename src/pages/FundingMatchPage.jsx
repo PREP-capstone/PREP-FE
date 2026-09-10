@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
-import { getFundingRecommendations } from '../api/fundingApi';
+import { getFundingRecommendations, getSessionFundingRecommendations } from '../api/fundingApi';
 
 // BE(app/domain/funding_match.py)가 인식하는 사업 단계 값. 자유 텍스트라도 동작은 하지만,
 // 이 값들과 겹쳐야 "사업 단계 매칭" 가점(+16)을 받는다.
@@ -93,7 +93,14 @@ function formatRecommendedAt(recommendedAt) {
 }
 
 export default function FundingMatchPage() {
+  const [params] = useSearchParams();
+  const sessionId = params.get('session')?.trim() || null;
+  return <FundingMatchContent key={sessionId || 'pdf'} sessionId={sessionId} />;
+}
+
+function FundingMatchContent({ sessionId }) {
   const navigate = useNavigate();
+  const requestVersion = useRef(0);
 
   const [reportFile, setReportFile] = useState(null);
   const [region, setRegion] = useState('');
@@ -122,12 +129,13 @@ export default function FundingMatchPage() {
     };
   }, [selectedGrant]);
 
-  const findFunding = async () => {
-    if (!reportFile) {
+  const findFunding = useCallback(async ({ file, region, startupStage, keywords } = {}) => {
+    if (!sessionId && !file) {
       setLoadError('먼저 리포트 PDF를 업로드해주세요.');
       return;
     }
     setIsLoading(true);
+    const version = ++requestVersion.current;
     setLoadError(null);
     // 새 요청을 시작하면 이전 결과부터 비운다 — 실패해도 지난 추천이 최신 결과처럼 남아있지 않도록.
     setRecommendations([]);
@@ -136,24 +144,37 @@ export default function FundingMatchPage() {
     setSourceWarnings([]);
     setHasSearched(false);
     try {
-      const result = await getFundingRecommendations({
-        file: reportFile,
+      const result = await (sessionId ? getSessionFundingRecommendations : getFundingRecommendations)({
+        sessionId,
+        file,
         region,
         startupStage,
-        keywords: keywordsText,
+        keywords: sessionId ? (keywords || '').split(',').map((word) => word.trim()).filter(Boolean) : keywords,
         topK: 12,
       });
+      if (version !== requestVersion.current) return;
       setRecommendations(result?.recommendations ?? []);
       setRecommendedAt(result?.recommended_at ?? null);
       setExtractedProfile(result?.extracted_profile ?? null);
       setSourceWarnings(result?.source_warnings ?? []);
       setHasSearched(true);
     } catch (err) {
-      setLoadError(err.message || '지원사업 추천 정보를 불러오지 못했어요.');
+      if (version !== requestVersion.current) return;
+      const errorCode = err.data?.code ?? err.data?.detail?.code;
+      setLoadError(sessionId && errorCode === 'ANALYSIS_SESSION_NOT_FOUND'
+        ? '검진 세션이 없거나 만료되었습니다. 저장한 리포트 PDF로 추천을 요청해주세요.'
+        : err.message || '지원사업 추천 정보를 불러오지 못했어요.');
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
-  };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (sessionId) findFunding();
+    return () => { requestVersion.current += 1; };
+  }, [sessionId, findFunding]);
+
+  const search = () => findFunding({ file: reportFile, region, startupStage, keywords: keywordsText });
 
   const recommendedAtLabel = formatRecommendedAt(recommendedAt);
   const matchScores = recommendations.map((g) => g.match_score).filter((n) => typeof n === 'number');
@@ -175,7 +196,7 @@ export default function FundingMatchPage() {
             <span className={styles['topbar-title']}>지원금 추천</span>
           </div>
           <div className={styles['top-actions']}>
-            <button className={styles.btn} onClick={findFunding} disabled={isLoading}>
+            <button className={styles.btn} onClick={search} disabled={isLoading}>
               {isLoading ? '불러오는 중...' : '매칭 새로고침'}
             </button>
           </div>
@@ -187,7 +208,7 @@ export default function FundingMatchPage() {
               <div className={styles.label}>지원금 매칭</div>
               <h1>지원금 자동매칭</h1>
               <p className={styles['head-desc']}>
-                업로드한 아이디어검진 리포트 PDF 내용을 기준으로 지원사업 적합도, 마감일, 지원금액, 지원대상을 비교합니다.
+                {sessionId ? '현재 아이디어검진 결과' : '업로드한 아이디어검진 리포트 PDF 내용'}를 기준으로 지원사업 적합도, 마감일, 지원금액, 지원대상을 비교합니다.
               </p>
             </div>
             <div className={styles['summary-grid']}>
@@ -200,15 +221,15 @@ export default function FundingMatchPage() {
             <aside className={`${styles.panel} ${styles.side}`}>
               <h2 className={styles['section-title']}>분석 입력</h2>
               <div className={styles['report-chip']}>
-                <div className={styles['chip-kicker']}>업로드한 리포트에서 인식된 정보</div>
-                <div className={styles['chip-title']}>{extractedProfile?.service_name || '아직 업로드된 리포트가 없어요'}</div>
+                <div className={styles['chip-kicker']}>{sessionId ? '아이디어검진 연동 정보' : '업로드한 리포트에서 인식된 정보'}</div>
+                <div className={styles['chip-title']}>{extractedProfile?.service_name || (sessionId ? '검진 결과 기반 추천' : '아직 업로드된 리포트가 없어요')}</div>
                 <div className={styles['chip-text']}>
                   {extractedProfile
                     ? [extractedProfile.category_1, extractedProfile.category_2, extractedProfile.service_type].filter(Boolean).join(' · ') || '카테고리/서비스 형태를 인식하지 못했어요.'
-                    : 'PDF를 업로드하고 지원사업을 찾으면 리포트에서 추출한 카테고리, 타깃, 서비스 형태가 여기 표시됩니다.'}
+                    : sessionId ? '검진 결과를 바탕으로 지원사업을 찾습니다.' : 'PDF를 업로드하고 지원사업을 찾으면 리포트에서 추출한 카테고리, 타깃, 서비스 형태가 여기 표시됩니다.'}
                 </div>
               </div>
-              <label className={styles.upload}>
+              {sessionId ? <button className={styles.btn} onClick={() => navigate('/funding-match', { replace: true })}>PDF로 추천받기</button> : <label className={styles.upload}>
                 <input
                   type="file"
                   accept="application/pdf"
@@ -218,7 +239,7 @@ export default function FundingMatchPage() {
                 <div className={styles['upload-icon']}>PDF</div>
                 <div className={styles['upload-title']}>리포트 PDF 업로드</div>
                 <div className={styles['upload-text']}>{reportFile?.name || '리포트 페이지에서 저장한 PDF를 올리면 추천을 시작합니다.'}</div>
-              </label>
+              </label>}
               <div className={styles.field}>
                 <label>사업 단계</label>
                 <select value={startupStage} onChange={(e) => setStartupStage(e.target.value)}>
@@ -228,13 +249,13 @@ export default function FundingMatchPage() {
               </div>
               <div className={styles.field}>
                 <label>지역</label>
-                <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="예: 충남 부여군 (입력 안 하면 PDF에서 자동 인식)" />
+                <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder={sessionId ? '예: 충남 부여군 (선택)' : '예: 충남 부여군 (입력 안 하면 PDF에서 자동 인식)'} />
               </div>
               <div className={styles.field}>
                 <label>주요 키워드</label>
                 <input value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} placeholder="쉼표로 구분해서 입력" />
               </div>
-              <button className={`${styles.btn} ${styles.primary}`} onClick={findFunding} disabled={isLoading}>
+              <button className={`${styles.btn} ${styles.primary}`} onClick={search} disabled={isLoading}>
                 {isLoading ? '지원사업 찾는 중...' : '지원사업 다시 찾기'}
               </button>
               {loadError && <div className={`${styles['status-message']} ${styles.error}`}>{loadError}</div>}
@@ -261,7 +282,7 @@ export default function FundingMatchPage() {
               {showCriteria && (
                 <div className={styles['criteria-box']}>
                   <b>매칭 기준</b>
-                  <span>업로드한 리포트에서 추출한 카테고리, 타깃, 서비스 형태, 키워드와 지원사업의 지원대상/분야/마감일을 비교해 매칭률을 표시합니다. 지원사업 다시 찾기를 누른 시점 기준으로 마감되지 않은 공고만 추천합니다.</span>
+                  <span>{sessionId ? '검진 세션에 저장된' : '업로드한 리포트에서 추출한'} 카테고리, 타깃, 서비스 형태, 키워드와 지원사업의 지원대상/분야/마감일을 비교해 매칭률을 표시합니다. 지원사업 다시 찾기를 누른 시점 기준으로 마감되지 않은 공고만 추천합니다.</span>
                 </div>
               )}
               <div className={styles.metrics}>
@@ -297,7 +318,7 @@ export default function FundingMatchPage() {
               </div>
             </section>
           </div>
-          <div className={styles.note}>리포트 페이지에서 저장한 PDF를 업로드하면, 그 시점 기준으로 마감되지 않은 지원사업을 찾아드립니다.</div>
+          <div className={styles.note}>{sessionId ? '현재 검진 결과를 기준으로' : '리포트 PDF를 기준으로'} 추천 시점에 마감되지 않은 지원사업을 찾아드립니다.</div>
         </section>
       </main>
       {selectedGrant && (
