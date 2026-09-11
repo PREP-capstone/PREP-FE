@@ -659,13 +659,18 @@
   background: transparent;
 }
 
+/* [2026-09-10] .blank/textarea.blank가 .paper textarea와 명시도(specificity)가
+   똑같아서(둘 다 클래스1+태그1), 파일 뒤쪽에 있는 .paper textarea가 항상 이겨버려
+   자동생성 여부와 무관하게 모든 textarea가 흰색으로 보이던 버그. .paper textarea.blank로
+   명시도를 하나 더 높여서, 순서와 무관하게 빈칸 스타일이 항상 이기도록 고정한다. */
 .blank {
   background: #fffdf5;
 }
 
 .blank input,
-textarea.blank {
+.paper textarea.blank {
   color: #8a5a00;
+  background: #fffdf5;
 }
 
 .doc-section {

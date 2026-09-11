@@ -16,17 +16,40 @@ import {
   PROPOSAL_REPORT_MAX_BYTES,
 } from '../constants/proposalOptions';
 
-// CHECKLIST/TABLE 필드의 세부 구성(체크리스트 항목명, 표 컬럼명)은 아직 API 명세서
-// (field-definitions 응답)에 포함돼 있지 않아, 알려진 field_key에 한해 로컬 기본값으로 채운다.
-// TODO: 백엔드와 협의해 이 정보를 field-definitions 응답 자체에 포함하는 방향으로 옮기는 게 맞아 보임.
-const CHECKLIST_ITEMS_BY_KEY = {
-  attachment_checklist: ['사업자등록증', '최근 3개년 재무제표', '국세·지방세 납세증명서', '특허·상표 등록증(해당 시)'],
+// TABLE 필드의 컬럼 정의는 PREP-BE의 app/domain/proposal_llm.py TABLE_ITEM_SCHEMAS와
+// field_key 단위로 정확히 일치해야 한다 (2026-09-10 백엔드 확인 기준). 각 행 객체의
+// key가 그대로 이 컬럼 key와 매칭되므로, 라벨만 화면 표시용으로 붙인다.
+// field-definitions 응답에 아직 TABLE 스키마 자체가 내려오지 않아, 알려진 4개
+// field_key에 한해 로컬에 유지한다 (스키마가 API에 추가되면 이 맵은 걷어낼 수 있음).
+const TABLE_COLUMNS_BY_KEY = {
+  growth_targets: [
+    { key: 'year', label: '연차' },
+    { key: 'revenue_krw', label: '매출 목표(원)' },
+    { key: 'headcount', label: '고용 목표(명)' },
+    { key: 'basis', label: '추정 근거' },
+  ],
+  annual_budget_exec: [
+    { key: 'year', label: '연차' },
+    { key: 'government_fund_krw', label: '정부출연금(원)' },
+    { key: 'self_fund_cash_krw', label: '자기부담금 현금(원)' },
+    { key: 'self_fund_in_kind_krw', label: '자기부담금 현물(원)' },
+  ],
+  financial_projection: [
+    { key: 'year', label: '연차' },
+    { key: 'revenue_krw', label: '매출(원)' },
+    { key: 'cost_krw', label: '비용(원)' },
+    { key: 'operating_profit_krw', label: '영업이익(원)' },
+  ],
+  cap_table: [
+    { key: 'shareholder', label: '주주 구분' },
+    { key: 'equity_percent', label: '지분율(%)' },
+  ],
 };
 
-const TABLE_COLUMNS_BY_KEY = {
-  growth_targets: ['연차', '매출(만원)', '고용(명)'],
-  annual_budget_exec: ['연차', '정부출연금', '자기부담금(현금)', '자기부담금(현물)'],
-};
+function emptyTableRow(fieldKey) {
+  const columns = TABLE_COLUMNS_BY_KEY[fieldKey] ?? [];
+  return Object.fromEntries(columns.map((col) => [col.key, '']));
+}
 
 // IR추가 카테고리 칩은 "투자자료용"으로, 그 외 선택 항목은 "사업 내용 보완"으로 묶어 표시한다.
 const INVEST_ONLY_CATEGORY = 'IR추가';
@@ -52,14 +75,10 @@ function formatExpiry(value) {
 }
 
 function buildSections(fieldDefs, fieldValues) {
-  return fieldDefs.map((field) => {
-    const value = fieldValues[field.field_key];
-    // complete API 예시 응답은 final_text를 문자열로만 보여주고 있어(§5.3), CHECKLIST/TABLE처럼
-    // 구조화된 값은 일단 JSON 문자열로 직렬화해서 보낸다.
-    // TODO: 이 타입 처리(특히 TABLE/CHECKLIST)가 맞는지 API 담당과 확인 필요.
-    const finalText = typeof value === 'string' ? value : JSON.stringify(value ?? '');
-    return { field_key: field.field_key, final_text: finalText };
-  });
+  // value 타입은 field_type을 그대로 따른다 — TEXT=문자열, CHECKLIST=문자열 배열,
+  // TABLE=객체 배열. 서버가 label/field_type을 자체 조회해서 채우므로 여기서는
+  // field_key + value만 보낸다 (2026-09-10 백엔드 확인: final_text/JSON 직렬화는 오답).
+  return fieldDefs.map((field) => ({ field_key: field.field_key, value: fieldValues[field.field_key] }));
 }
 
 export default function ProposalWriterPage() {
@@ -77,6 +96,11 @@ export default function ProposalWriterPage() {
   const [generateError, setGenerateError] = useState('');
 
   const [proposalId, setProposalId] = useState(null);
+  const [llmStatus, setLlmStatus] = useState(null);
+  // attachment_checklist 같은 CHECKLIST 필드는 백엔드가 유형별 고정 목록을 generate
+  // 응답으로 채워서 준다(하드코딩 아님). 이 "전체 항목 목록"은 최초 1회만 저장해두고,
+  // fieldValues[key]는 사용자가 체크 해제해서 "남긴" 하위집합을 담는다.
+  const [checklistItemsByKey, setChecklistItemsByKey] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeError, setCompleteError] = useState('');
@@ -150,12 +174,23 @@ export default function ProposalWriterPage() {
 
       const generated = await generateProposal({ reportFile, templateType, fieldValues: initialValues });
       setProposalId(generated?.proposal_id ?? null);
+      setLlmStatus(generated?.llm_status ?? 'ok');
 
+      // [2026-09-10 백엔드 확인] section.generated_text가 아니라 section.value로 온다.
+      // 또한 CHECKLIST/TABLE도 이 값을 그대로 받아야 해서(예: attachment_checklist는
+      // 서버가 유형별 고정 목록을 채워서 줌, growth_targets는 3개년 표 전체), 타입을
+      // 가리지 않고 전부 덮어쓴다 — 기존 typeof==='string' 가드가 이걸 막고 있었음.
       (generated?.sections ?? []).forEach((section) => {
-        if (typeof initialValues[section.field_key] === 'string') {
-          initialValues[section.field_key] = section.generated_text ?? '';
+        initialValues[section.field_key] = section.value;
+      });
+
+      const checklistMaster = {};
+      fields.forEach((f) => {
+        if (f.field_type === PROPOSAL_FIELD_TYPES.CHECKLIST) {
+          checklistMaster[f.field_key] = initialValues[f.field_key] ?? [];
         }
       });
+      setChecklistItemsByKey(checklistMaster);
 
       setFieldDefs(fields);
       setFieldValues(initialValues);
@@ -180,18 +215,18 @@ export default function ProposalWriterPage() {
     });
   }
 
-  function updateTableCell(fieldKey, rowIndex, colIndex, value) {
+  function updateTableCell(fieldKey, rowIndex, colKey, value) {
     setFieldValues((current) => {
-      const rows = (current[fieldKey] ?? []).map((row) => [...row]);
-      rows[rowIndex][colIndex] = value;
+      const rows = (current[fieldKey] ?? []).map((row) => ({ ...row }));
+      rows[rowIndex][colKey] = value;
       return { ...current, [fieldKey]: rows };
     });
   }
 
-  function addTableRow(fieldKey, colCount) {
+  function addTableRow(fieldKey) {
     setFieldValues((current) => {
       const rows = current[fieldKey] ?? [];
-      return { ...current, [fieldKey]: [...rows, Array(colCount).fill('')] };
+      return { ...current, [fieldKey]: [...rows, emptyTableRow(fieldKey)] };
     });
   }
 
@@ -229,7 +264,8 @@ export default function ProposalWriterPage() {
         (f) => f.requirement === PROPOSAL_REQUIREMENT.REQUIRED || activeOptionalKeys.has(f.field_key)
       );
       const sections = buildSections(activeFieldDefs, fieldValues);
-      const result = await completeProposal(proposalId, sections);
+      // [2026-09-10 백엔드 확인] template_type을 안 보내는 게 422의 직접 원인이었음.
+      const result = await completeProposal(proposalId, templateType, sections);
       setExpiresAt(result?.expires_at ?? null);
       setStep('complete');
     } catch (err) {
@@ -272,7 +308,7 @@ export default function ProposalWriterPage() {
   }
 
   function renderChecklistField(field) {
-    const items = CHECKLIST_ITEMS_BY_KEY[field.field_key] ?? [];
+    const items = checklistItemsByKey[field.field_key] ?? [];
     const checked = fieldValues[field.field_key] ?? [];
     return (
       <div className={styles.checklist}>
@@ -291,14 +327,14 @@ export default function ProposalWriterPage() {
   }
 
   function renderTableField(field) {
-    const columns = TABLE_COLUMNS_BY_KEY[field.field_key] ?? ['항목', '값'];
+    const columns = TABLE_COLUMNS_BY_KEY[field.field_key] ?? [];
     const rows = fieldValues[field.field_key] ?? [];
     return (
       <div className={styles['table-field']}>
         <table>
           <thead>
             <tr>
-              {columns.map((col) => <th key={col}>{col}</th>)}
+              {columns.map((col) => <th key={col.key}>{col.label}</th>)}
               <th />
             </tr>
           </thead>
@@ -306,12 +342,11 @@ export default function ProposalWriterPage() {
             {rows.map((row, rowIndex) => (
               // eslint-disable-next-line react/no-array-index-key
               <tr key={rowIndex}>
-                {columns.map((_, colIndex) => (
-                  // eslint-disable-next-line react/no-array-index-key
-                  <td key={colIndex}>
+                {columns.map((col) => (
+                  <td key={col.key}>
                     <input
-                      value={row[colIndex] ?? ''}
-                      onChange={(e) => updateTableCell(field.field_key, rowIndex, colIndex, e.target.value)}
+                      value={row[col.key] ?? ''}
+                      onChange={(e) => updateTableCell(field.field_key, rowIndex, col.key, e.target.value)}
                     />
                   </td>
                 ))}
@@ -324,7 +359,7 @@ export default function ProposalWriterPage() {
             ))}
           </tbody>
         </table>
-        <button className={styles['table-add-row']} onClick={() => addTableRow(field.field_key, columns.length)}>
+        <button className={styles['table-add-row']} onClick={() => addTableRow(field.field_key)}>
           + 행 추가
         </button>
       </div>
@@ -461,6 +496,13 @@ export default function ProposalWriterPage() {
                     <p>빈칸(옅은 주황색)만 직접 채우면 됩니다. 나머지는 AI 초안이 반영되어 있습니다.</p>
                   </div>
                 </div>
+
+                {llmStatus && llmStatus !== 'ok' && (
+                  <p className={styles.hint}>
+                    ⚠️ AI 초안 생성이 일시적으로 실패했어요. &quot;[자동 생성 실패 -- 직접 입력해주세요: ...]&quot;로
+                    표시된 항목은 직접 작성해주세요.
+                  </p>
+                )}
 
                 <div className={styles['paper-area']}>
                   <article className={styles.paper}>

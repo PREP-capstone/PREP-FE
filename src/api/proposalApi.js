@@ -36,15 +36,23 @@ export async function generateProposal({ reportFile, templateType, fieldValues }
 
 /**
  * POST /api/v1/proposals/{proposalId}/complete
- * payload: { sections: [{ field_key, final_text }] }
+ * payload: { template_type, sections: [{ field_key, value }] }
  * → { proposal_id, expires_at }
+ *
+ * template_type을 함께 보내야 하는 이유: GET /pdf가 문서 제목을 고르는 데 필요해서
+ * 이 시점에 서버가 함께 저장한다 (누락 시 422 PROPOSAL_TEMPLATE_TYPE_INVALID).
+ * sections는 field_key + value만 보낸다 — label/field_type은 서버가
+ * proposal_field_definitions에서 조회해 채우므로 프론트가 실어보내지 않는다.
  *
  * "완료"/"PDF 저장하기" 클릭 시 호출. 동기 방식 — 이 응답이 오는 시점에
  * PDF 생성까지 이미 끝나 있고 expires_at도 함께 온다. 별도 폴링은 없다.
  * 호출 이후에는 재수정·재완료를 지원하지 않는다 (팀 결정, 완료 전 확인 안내로 대체).
  */
-export async function completeProposal(proposalId, sections) {
-  const res = await apiClient.post(proposalPath(proposalId, '/complete'), { sections });
+export async function completeProposal(proposalId, templateType, sections) {
+  const res = await apiClient.post(proposalPath(proposalId, '/complete'), {
+    template_type: templateType,
+    sections,
+  });
   return unwrap(res);
 }
 
