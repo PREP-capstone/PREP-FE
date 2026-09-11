@@ -187,7 +187,9 @@ export default function ProposalWriterPage() {
       const checklistMaster = {};
       fields.forEach((f) => {
         if (f.field_type === PROPOSAL_FIELD_TYPES.CHECKLIST) {
-          checklistMaster[f.field_key] = initialValues[f.field_key] ?? [];
+          checklistMaster[f.field_key] = Array.isArray(initialValues[f.field_key]) ? initialValues[f.field_key] : [];
+          // 서버가 제공한 항목 목록은 표시용으로만 사용하고, 준비 완료 상태는 사용자가 직접 선택한다.
+          initialValues[f.field_key] = [];
         }
       });
       setChecklistItemsByKey(checklistMaster);
