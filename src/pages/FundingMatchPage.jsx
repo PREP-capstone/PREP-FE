@@ -22,9 +22,15 @@ function ddayLabel(deadline, daysLeft) {
 }
 
 function amountLabel(item) {
+  if (item.is_financial_support !== false && item.max_amount !== null && item.max_amount !== undefined) {
+    return `최대 ${item.max_amount.toLocaleString('ko-KR')}원`;
+  }
   if (item.support_amount_text) return item.support_amount_text;
-  if (item.max_amount) return `최대 ${item.max_amount.toLocaleString('ko-KR')}원`;
-  return '금액 미정';
+  return item.is_financial_support === false ? '지원 내용 확인 필요' : '지원 규모 확인 필요';
+}
+
+function supportTypeTags(item) {
+  return Array.isArray(item.support_types) ? item.support_types.filter(Boolean).slice(0, 3) : [];
 }
 
 function targetLabel(item) {
@@ -208,7 +214,7 @@ function FundingMatchContent({ sessionId }) {
               <div className={styles.label}>지원금 매칭</div>
               <h1>지원금 자동매칭</h1>
               <p className={styles['head-desc']}>
-                {sessionId ? '현재 아이디어검진 결과' : '업로드한 아이디어검진 리포트 PDF 내용'}를 기준으로 지원사업 적합도, 마감일, 지원금액, 지원대상을 비교합니다.
+                {sessionId ? '현재 아이디어검진 결과' : '업로드한 아이디어검진 리포트 PDF 내용'}를 기준으로 지원사업 적합도, 마감일, 지원 규모, 지원대상을 비교합니다.
               </p>
             </div>
             <div className={styles['summary-grid']}>
@@ -288,10 +294,10 @@ function FundingMatchContent({ sessionId }) {
               <div className={styles.metrics}>
                 <div className={styles.metric}><span>추천 사업</span><b>{recommendations.length}</b></div>
                 <div className={styles.metric}><span>평균 매칭률</span><b>{avgMatch !== null ? `${avgMatch}%` : '-'}</b></div>
-                <div className={styles.metric}><span>최대 지원금</span><b>{maxAmountLabel}</b></div>
+                <div className={styles.metric}><span>최대 지원 규모</span><b>{maxAmountLabel}</b></div>
                 <div className={styles.metric}><span>마감 임박</span><b>{closingSoonCount}건</b></div>
               </div>
-              <div className={styles['table-head']}><div>지원사업</div><div>매칭률</div><div>마감일</div><div>지원금액</div><div>다음 단계</div></div>
+              <div className={styles['table-head']}><div>지원사업</div><div>매칭률</div><div>마감일</div><div>지원 규모·내용</div><div>다음 단계</div></div>
               <div className={styles.list}>
                 {recommendations.map((grant) => (
                   <article className={styles.grant} key={grant.program_id}>
@@ -299,8 +305,8 @@ function FundingMatchContent({ sessionId }) {
                       <div className={styles['grant-title']}>{grant.title}</div>
                       <div className={styles['grant-desc']}>{summarizeDescription(grant)}</div>
                       <div className={styles.badges}>
-                        {[...grant.keywords.slice(0, 3), ddayLabel(grant.deadline, grant.days_left)].map((tag) => (
-                          <span className={`${styles.badge} ${tag.includes('남음') || tag.includes('마감') ? styles.warn : ''}`} key={tag}>{tag}</span>
+                        {[...grant.keywords.slice(0, 3), ...supportTypeTags(grant), ddayLabel(grant.deadline, grant.days_left)].map((tag, index) => (
+                          <span className={`${styles.badge} ${tag.includes('남음') || tag.includes('마감') ? styles.warn : ''}`} key={`${tag}-${index}`}>{tag}</span>
                         ))}
                       </div>
                     </div>
@@ -334,7 +340,7 @@ function FundingMatchContent({ sessionId }) {
             <div className={styles['detail-grid']}>
               <div><span>매칭률</span><b>{selectedGrant.match_score}%</b></div>
               <div><span>마감일</span><b>{formatDeadline(selectedGrant.deadline)}<br />{ddayLabel(selectedGrant.deadline, selectedGrant.days_left)}</b></div>
-              <div><span>지원금액</span><b>{amountLabel(selectedGrant)}</b></div>
+              <div><span>{selectedGrant.is_financial_support === false ? '지원 내용' : '지원 규모'}</span><b>{amountLabel(selectedGrant)}</b>{supportTypeTags(selectedGrant).length > 0 && <div className={styles['support-tags']}>{supportTypeTags(selectedGrant).map((tag) => <span className={styles.badge} key={tag}>{tag}</span>)}</div>}</div>
               <div><span>지원대상</span><b>{targetLabel(selectedGrant)}</b></div>
             </div>
             <p className={styles['detail-desc']}>{selectedGrant.description}</p>
