@@ -66,12 +66,16 @@ export const passReport = {
   data_feasibility: {
     data_feasibility_score: 3,
     risk_level: 'LOW',
+    privacy_score: 3,
+    privacy_level: 'HIGH',
+    privacy_grade: '높음',
     available_sources: [
       { data_name: '수면 시간·패턴', source_type: 'public_api', source_name: 'Apple HealthKit / Google Fit' },
       { data_name: '국민건강영양조사 수면 항목', source_type: 'public_api', source_name: 'KOSIS' },
     ],
     privacy_risks: [
-      { data_name: '수면 시간', reason: '생체지표로 분류되어 개인정보보호법상 처리 원칙 준수가 필요합니다.' },
+      { data_name: '복용약물', sensitivity_level: 3, reason: '민감정보 처리 기준 검토 필요' },
+      { data_name: '직접 입력한 민감정보', sensitivity_level: null, reason: '카탈로그에 분류되지 않은 항목입니다.' },
     ],
     standard_scale_candidates: [
       {
