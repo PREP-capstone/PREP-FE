@@ -26,7 +26,7 @@ export default function Sidebar({ active }) {
         </Link>
         <div className={styles['nav-section']}>검진 후 이용 가능</div>
         <Link to="/funding-match" className={cx(styles, 'nav-item', active === 'funding' && 'active')}>
-          <i className="ti ti-wallet"></i>지원금 매칭
+          <i className="ti ti-wallet"></i>지원사업 매칭
         </Link>
         <Link to="/proposal-writer" className={cx(styles, 'nav-item', active === 'proposal' && 'active')}>
           <i className="ti ti-file-pencil"></i>제안서 작성
