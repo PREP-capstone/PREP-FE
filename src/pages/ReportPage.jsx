@@ -700,7 +700,7 @@ export default function ReportPage({ data, expiresAt = null }) {
           </div>
         )}
 
-        {/* 하단 안내 — 지원금 매칭 유도 (긍정 프레임). 인쇄 시 제외. */}
+        {/* 하단 안내 — 지원사업 매칭 유도 (긍정 프레임). 인쇄 시 제외. */}
         {!isPrintMode && (
           <div className={styles['report-footer-cta']}>
             {isFail ? (
@@ -722,7 +722,7 @@ export default function ReportPage({ data, expiresAt = null }) {
               <>
                 <div className={styles['footer-cta-text']}>
                   <i className="ti ti-wallet"></i>
-                  <span>PDF를 저장하시면 지원금 매칭 서비스도 같이 사용 가능해요!</span>
+                  <span>PDF를 저장하시면 지원사업 매칭 서비스도 같이 사용 가능해요!</span>
                 </div>
                 <div className={styles['footer-cta-btns']}>
                   <button className={styles['nav-btn']} onClick={handleSavePdf}>
@@ -732,7 +732,7 @@ export default function ReportPage({ data, expiresAt = null }) {
                     className={cx(styles, 'nav-btn', 'cta-primary')}
                     onClick={() => navigate(session.session_id ? `/funding-match?session=${encodeURIComponent(session.session_id)}` : '/funding-match')}
                   >
-                    지원금 매칭 바로가기 <i className="ti ti-arrow-right"></i>
+                    지원사업 매칭 바로가기 <i className="ti ti-arrow-right"></i>
                   </button>
                 </div>
               </>

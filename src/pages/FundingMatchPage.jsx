@@ -203,7 +203,7 @@ function FundingMatchContent({ sessionId }) {
             <button className={styles['back-btn']} onClick={() => navigate('/')}>
               <i className="ti ti-arrow-left"></i>메인으로 가기
             </button>
-            <span className={styles['topbar-title']}>지원금 추천</span>
+            <span className={styles['topbar-title']}>지원사업 추천</span>
           </div>
           <div className={styles['top-actions']}>
             <button className={styles.btn} onClick={search} disabled={isLoading}>
@@ -215,8 +215,8 @@ function FundingMatchContent({ sessionId }) {
         <section className={`${styles.workspace} ${styles['funding-workspace']}`}>
           <div className={styles['page-head']}>
             <div>
-              <div className={styles.label}>지원금 매칭</div>
-              <h1>지원금 자동매칭</h1>
+              <div className={styles.label}>지원사업 매칭</div>
+              <h1>지원사업 자동매칭</h1>
               <p className={styles['head-desc']}>
                 {sessionId ? '현재 아이디어검진 결과' : '업로드한 아이디어검진 리포트 PDF 내용'}를 기준으로 지원사업 적합도, 마감일, 지원 규모, 지원대상을 비교합니다.
               </p>

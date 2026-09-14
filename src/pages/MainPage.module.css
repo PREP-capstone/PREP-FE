@@ -119,7 +119,7 @@
   content: ''; flex: 1; height: 1px; background: #e8e8e8;
 }
 
-/* ── 지원금 매칭 — 가로 리스트형 ── */
+/* ── 지원사업 매칭 — 가로 리스트형 ── */
 .service-row {
   background: #fff; border: 1px solid #e8e8e8; border-radius: 12px;
   padding: 22px 26px; margin-bottom: 22px;

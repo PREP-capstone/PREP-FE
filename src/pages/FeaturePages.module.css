@@ -431,6 +431,9 @@
 .list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #fafafa;
 }
 
 .funding-loading {
@@ -470,18 +473,16 @@
 }
 
 .grant {
-  border-bottom: 1px solid #ededed;
+  border: 1px solid #ededed;
+  border-radius: 10px;
   background: #fff;
 }
 
-.grant:last-child {
-  border-bottom: 0;
-}
-
 .grant > div {
-  padding: 17px 14px;
+  padding: 15px 14px;
   border-right: 1px solid #f0f0f0;
 }
+
 
 .grant > div:last-child {
   border-right: 0;
