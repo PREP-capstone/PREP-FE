@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
 import { getFundingRecommendations, getSessionFundingRecommendations } from '../api/fundingApi';
+import { KOREAN_REGIONS } from '../constants/koreanRegions';
 
 // BE(app/domain/funding_match.py)가 인식하는 사업 단계 값. 자유 텍스트라도 동작은 하지만,
 // 이 값들과 겹쳐야 "사업 단계 매칭" 가점(+16)을 받는다.
@@ -109,7 +110,8 @@ function FundingMatchContent({ sessionId }) {
   const requestVersion = useRef(0);
 
   const [reportFile, setReportFile] = useState(null);
-  const [region, setRegion] = useState('');
+  const [regionProvince, setRegionProvince] = useState('');
+  const [regionDistrict, setRegionDistrict] = useState('');
   const [startupStage, setStartupStage] = useState('');
   const [keywordsText, setKeywordsText] = useState('');
 
@@ -180,6 +182,8 @@ function FundingMatchContent({ sessionId }) {
     return () => { requestVersion.current += 1; };
   }, [sessionId, findFunding]);
 
+  const selectedProvince = KOREAN_REGIONS.find((item) => item.name === regionProvince);
+  const region = [regionProvince, regionDistrict].filter(Boolean).join(' ');
   const search = () => findFunding({ file: reportFile, region, startupStage, keywords: keywordsText });
 
   const recommendedAtLabel = formatRecommendedAt(recommendedAt);
@@ -255,7 +259,31 @@ function FundingMatchContent({ sessionId }) {
               </div>
               <div className={styles.field}>
                 <label>지역</label>
-                <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder={sessionId ? '예: 충남 부여군 (선택)' : '예: 충남 부여군 (입력 안 하면 PDF에서 자동 인식)'} />
+                <div className={styles['region-fields']}>
+                  <select
+                    value={regionProvince}
+                    onChange={(e) => {
+                      setRegionProvince(e.target.value);
+                      setRegionDistrict('');
+                    }}
+                    aria-label="시·도 선택"
+                  >
+                    <option value="">시·도 선택 안 함</option>
+                    {KOREAN_REGIONS.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+                  </select>
+                  <select
+                    value={regionDistrict}
+                    onChange={(e) => setRegionDistrict(e.target.value)}
+                    disabled={!selectedProvince}
+                    aria-label="시·군·구 선택"
+                  >
+                    <option value="">시·군·구 선택 안 함</option>
+                    {selectedProvince?.districts.map((district) => <option key={district} value={district}>{district}</option>)}
+                  </select>
+                </div>
+                <div className={styles['field-hint']}>
+                  {region ? `선택 지역: ${region}` : sessionId ? '선택하지 않으면 전국 기준으로 추천합니다.' : '선택하지 않으면 PDF에서 인식한 지역을 사용합니다.'}
+                </div>
               </div>
               <div className={styles.field}>
                 <label>주요 키워드</label>
@@ -297,9 +325,17 @@ function FundingMatchContent({ sessionId }) {
                 <div className={styles.metric}><span>최대 지원 규모</span><b>{maxAmountLabel}</b></div>
                 <div className={styles.metric}><span>마감 임박</span><b>{closingSoonCount}건</b></div>
               </div>
-              <div className={styles['table-head']}><div>지원사업</div><div>매칭률</div><div>마감일</div><div>지원 규모·내용</div><div>다음 단계</div></div>
-              <div className={styles.list}>
-                {recommendations.map((grant) => (
+              {isLoading ? (
+                <div className={styles['funding-loading']} role="status" aria-live="polite">
+                  <span className={styles.spinner} aria-hidden="true"></span>
+                  <strong>지원사업을 매칭하고 있어요</strong>
+                  <span>분석 정보와 모집 조건을 비교하는 중입니다.</span>
+                </div>
+              ) : (
+                <>
+                  <div className={styles['table-head']}><div>지원사업</div><div>매칭률</div><div>마감일</div><div>지원 규모·내용</div><div>다음 단계</div></div>
+                  <div className={styles.list}>
+                    {recommendations.map((grant) => (
                   <article className={styles.grant} key={grant.program_id}>
                     <div>
                       <div className={styles['grant-title']}>{grant.title}</div>
@@ -317,11 +353,13 @@ function FundingMatchContent({ sessionId }) {
                       <button className={styles.btn} onClick={() => setSelectedGrant(grant)}>상세보기</button>
                     </div>
                   </article>
-                ))}
-                {!isLoading && hasSearched && recommendations.length === 0 && (
-                  <div className={styles['status-message']}>지금 기준으로 추천할 수 있는 지원사업이 없어요. 조건을 바꿔서 다시 찾아보세요.</div>
-                )}
-              </div>
+                    ))}
+                    {hasSearched && recommendations.length === 0 && (
+                      <div className={styles['status-message']}>지금 기준으로 추천할 수 있는 지원사업이 없어요. 조건을 바꿔서 다시 찾아보세요.</div>
+                    )}
+                  </div>
+                </>
+              )}
             </section>
           </div>
           <div className={styles.note}>{sessionId ? '현재 검진 결과를 기준으로' : '리포트 PDF를 기준으로'} 추천 시점에 마감되지 않은 지원사업을 찾아드립니다.</div>
