@@ -7,6 +7,7 @@ import {
   generateProposal,
   completeProposal,
   downloadProposalPdf,
+  downloadProposalWord,
 } from '../api/proposalApi';
 import {
   TEMPLATE_TYPE_OPTIONS,
@@ -15,6 +16,13 @@ import {
   PROPOSAL_REQUIREMENT,
   PROPOSAL_REPORT_MAX_BYTES,
 } from '../constants/proposalOptions';
+
+// 사용자가 "+ 항목 추가"로 자유 서술형 항목을 덧붙일 수 있는 카테고리 5개 (팀 확정).
+// [2026-09-11] 이 항목들은 아직 서버로 전송되지 않는다 — proposal_field_definitions에
+// 등록된 field_key가 없어서 completeProposal의 sections 스키마로 보낼 방법이 없다.
+// 백엔드와 custom_fields 배열 스펙 협의 중이며, 확정되면 handleConfirmComplete의
+// TODO 부분만 채우면 된다. 그 전까지는 화면에만 남아있고 완료 시 전송되지 않는다.
+const ADDABLE_CATEGORIES = ['일반현황', '문제인식', '성장전략', '팀구성', 'RND특화'];
 
 // TABLE 필드의 컬럼 정의는 PREP-BE의 app/domain/proposal_llm.py TABLE_ITEM_SCHEMAS와
 // field_key 단위로 정확히 일치해야 한다 (2026-09-10 백엔드 확인 기준). 각 행 객체의
@@ -107,6 +115,17 @@ export default function ProposalWriterPage() {
   const [expiresAt, setExpiresAt] = useState(null);
   const expiryLabel = useMemo(() => formatExpiry(expiresAt), [expiresAt]);
   const [downloadError, setDownloadError] = useState('');
+  const [wordDownloadError, setWordDownloadError] = useState('');
+
+  // 전체화면 로딩 오버레이 — 초안 생성/유형전환/완료 처리 중 공통으로 사용.
+  const [loadingText, setLoadingText] = useState('');
+
+  // 편집 중 문서 유형 변경
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [templateSwitchTarget, setTemplateSwitchTarget] = useState(null);
+
+  // 카테고리별 사용자 추가 항목 (5개 카테고리 한정, ADDABLE_CATEGORIES 참고)
+  const [customFieldsByCategory, setCustomFieldsByCategory] = useState({});
 
   const requiredFields = useMemo(
     () => fieldDefs.filter((f) => f.requirement === PROPOSAL_REQUIREMENT.REQUIRED),
@@ -161,6 +180,7 @@ export default function ProposalWriterPage() {
   async function handleGoToEdit() {
     if (!reportFile || !templateType) return;
     setIsGenerating(true);
+    setLoadingText('AI가 검진 리포트를 바탕으로 초안을 작성하고 있습니다...');
     setGenerateError('');
 
     try {
@@ -195,11 +215,13 @@ export default function ProposalWriterPage() {
       setFieldDefs(fields);
       setFieldValues(initialValues);
       setActiveOptionalKeys(new Set());
+      setCustomFieldsByCategory({});
       setStep('edit');
     } catch (err) {
       setGenerateError(err.message || '초안 생성에 실패했어요. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsGenerating(false);
+      setLoadingText('');
     }
   }
 
@@ -250,9 +272,92 @@ export default function ProposalWriterPage() {
     });
   }
 
+  // ---- 편집 중 문서 유형 변경 ----
+  function requestTemplateSwitch(newTemplateType) {
+    if (!newTemplateType || newTemplateType === templateType) return;
+    setTemplateSwitchTarget(newTemplateType);
+    setShowSwitchModal(true);
+  }
+
+  function cancelTemplateSwitch() {
+    setShowSwitchModal(false);
+    setTemplateSwitchTarget(null);
+  }
+
+  async function confirmTemplateSwitch() {
+    const newTemplateType = templateSwitchTarget;
+    setShowSwitchModal(false);
+    setLoadingText('문서 유형을 변경하고 있습니다...');
+
+    try {
+      const defsRes = await getProposalFieldDefinitions(newTemplateType);
+      const fields = defsRes?.fields ?? [];
+      const previousFieldKeys = new Set(fieldDefs.map((f) => f.field_key));
+
+      const nextValues = {};
+      fields.forEach((f) => {
+        // 겹치는 field_key는 기존에 입력/생성해둔 값을 그대로 유지한다.
+        nextValues[f.field_key] = fieldValues[f.field_key] ?? defaultValueForFieldType(f.field_type);
+      });
+
+      // 새 유형에서 처음 등장하는 필드만 AI 초안을 다시 받아 채운다 (기존 필드는 덮어쓰지 않음).
+      const generated = await generateProposal({ reportFile, templateType: newTemplateType, fieldValues: nextValues });
+      setProposalId(generated?.proposal_id ?? proposalId);
+      setLlmStatus(generated?.llm_status ?? llmStatus);
+      (generated?.sections ?? []).forEach((section) => {
+        if (!previousFieldKeys.has(section.field_key)) {
+          nextValues[section.field_key] = section.value;
+        }
+      });
+
+      const checklistMaster = {};
+      fields.forEach((f) => {
+        if (f.field_type === PROPOSAL_FIELD_TYPES.CHECKLIST) {
+          checklistMaster[f.field_key] = nextValues[f.field_key] ?? [];
+        }
+      });
+      setChecklistItemsByKey(checklistMaster);
+
+      setTemplateType(newTemplateType);
+      setFieldDefs(fields);
+      setFieldValues(nextValues);
+      setActiveOptionalKeys(new Set());
+      // 커스텀 항목(customFieldsByCategory)은 카테고리 기준이라 유형이 바뀌어도 그대로 유지한다.
+    } catch (err) {
+      setGenerateError(err.message || '문서 유형 변경에 실패했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setLoadingText('');
+      setTemplateSwitchTarget(null);
+    }
+  }
+
+  // ---- 카테고리별 사용자 추가 항목 ----
+  function addCustomField(category) {
+    setCustomFieldsByCategory((current) => {
+      const list = current[category] ?? [];
+      const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      return { ...current, [category]: [...list, { id, value: '' }] };
+    });
+  }
+
+  function updateCustomField(category, id, value) {
+    setCustomFieldsByCategory((current) => ({
+      ...current,
+      [category]: (current[category] ?? []).map((f) => (f.id === id ? { ...f, value } : f)),
+    }));
+  }
+
+  function removeCustomField(category, id) {
+    setCustomFieldsByCategory((current) => ({
+      ...current,
+      [category]: (current[category] ?? []).filter((f) => f.id !== id),
+    }));
+  }
+
   async function handleConfirmComplete() {
     setShowConfirmModal(false);
     setIsCompleting(true);
+    setLoadingText('제안서를 완료 처리하고 있습니다...');
     setCompleteError('');
     // [리뷰 P1 반영] setStep('complete')를 API 호출 전에 먼저 부르면, complete가 4xx로
     // 실패해도 사용자가 이미 완료 화면으로 넘어가버려 편집 화면으로 돌아갈 수 없었다.
@@ -264,6 +369,8 @@ export default function ProposalWriterPage() {
         (f) => f.requirement === PROPOSAL_REQUIREMENT.REQUIRED || activeOptionalKeys.has(f.field_key)
       );
       const sections = buildSections(activeFieldDefs, fieldValues);
+      // TODO(customFieldsByCategory): 백엔드와 custom_fields 스펙(카테고리+라벨+값 배열)
+      // 확정되면 sections와 함께 여기서 실어보낸다. 지금은 화면에만 남고 전송하지 않는다.
       // [2026-09-10 백엔드 확인] template_type을 안 보내는 게 422의 직접 원인이었음.
       const result = await completeProposal(proposalId, templateType, sections);
       setExpiresAt(result?.expires_at ?? null);
@@ -272,6 +379,7 @@ export default function ProposalWriterPage() {
       setCompleteError(err.message || '제안서 완료 처리에 실패했어요. 내용을 확인하고 다시 시도해주세요.');
     } finally {
       setIsCompleting(false);
+      setLoadingText('');
     }
   }
 
@@ -288,6 +396,23 @@ export default function ProposalWriterPage() {
     } catch (err) {
       // PROPOSAL_NOT_FOUND(404) 등 — "만료되었습니다"류 메시지만 보여주고 별도 화면 이동은 하지 않는다 (팀 결정).
       setDownloadError(err.message || '제안서를 찾을 수 없거나 만료되었어요.');
+    }
+  }
+
+  async function handleDownloadWord() {
+    setWordDownloadError('');
+    try {
+      const blob = await downloadProposalWord(proposalId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'prep-proposal.docx';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // 백엔드 Word 엔드포인트가 아직 없어 항상 실패한다 (협의 완료, 구현 대기 중).
+      // API가 준비되면 이 catch에서 실패할 일이 없어지므로 별도 코드 수정 없이 정상 동작한다.
+      setWordDownloadError('Word 다운로드는 곧 지원될 예정이에요. 잠시만 기다려주세요.');
     }
   }
 
@@ -445,6 +570,20 @@ export default function ProposalWriterPage() {
           {step === 'edit' && (
             <div className={`${styles.layout} ${styles.proposal}`}>
               <aside className={`${styles.panel} ${styles.side}`}>
+                <div className={styles['switch-box']}>
+                  <label htmlFor="templateSwitch">문서 유형 변경</label>
+                  <select
+                    id="templateSwitch"
+                    className={styles['switch-select']}
+                    value={templateType ?? ''}
+                    onChange={(e) => requestTemplateSwitch(e.target.value)}
+                  >
+                    {TEMPLATE_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <h2 className={styles['section-title']}>문서 구성 (필수)</h2>
                 <div className={styles['progress-list']}>
                   {categoriesInOrder.map((category) => (
@@ -495,6 +634,7 @@ export default function ProposalWriterPage() {
                     <h2>제안서 편집</h2>
                     <p>빈칸(옅은 주황색)만 직접 채우면 됩니다. 나머지는 AI 초안이 반영되어 있습니다.</p>
                   </div>
+                  <span className={styles['expiry-note']}>⏱ 완료 시점부터 10분간만 보관</span>
                 </div>
 
                 {llmStatus && llmStatus !== 'ok' && (
@@ -508,11 +648,47 @@ export default function ProposalWriterPage() {
                   <article className={styles.paper}>
                     {categoriesInOrder.map((category, idx) => (
                       <section className={styles['doc-section']} key={category}>
-                        <h3><span className={styles.num}>{idx + 1}</span>{category}</h3>
+                        <div className={styles['doc-section-head']}>
+                          <h3><span className={styles.num}>{idx + 1}</span>{category}</h3>
+                          {ADDABLE_CATEGORIES.includes(category) && (
+                            <button
+                              type="button"
+                              className={styles['add-field-btn']}
+                              onClick={() => addCustomField(category)}
+                            >
+                              + 항목 추가
+                            </button>
+                          )}
+                        </div>
                         {requiredByCategory[category].map((field) => (
                           <div key={field.field_key} style={{ marginBottom: 16 }}>
-                            <p style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 6 }}>{field.label}</p>
+                            <p style={{ fontWeight: 700, fontSize: 13.5, marginBottom: field.description ? 2 : 6 }}>
+                              {field.label}
+                            </p>
+                            {field.description && (
+                              <p className={styles['item-hint']}>{field.description}</p>
+                            )}
                             {renderField(field)}
+                          </div>
+                        ))}
+                        {(customFieldsByCategory[category] ?? []).map((custom) => (
+                          <div key={custom.id} style={{ marginBottom: 16 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              <p style={{ fontWeight: 700, fontSize: 13.5, margin: 0 }}>추가 항목</p>
+                              <button
+                                type="button"
+                                className={styles['remove-chip-btn']}
+                                onClick={() => removeCustomField(category, custom.id)}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <textarea
+                              className={styles.blank}
+                              placeholder="자유롭게 내용을 작성하세요."
+                              value={custom.value}
+                              onChange={(e) => updateCustomField(category, custom.id, e.target.value)}
+                            />
                           </div>
                         ))}
                       </section>
@@ -581,7 +757,9 @@ export default function ProposalWriterPage() {
                   )}
                   <div className={styles['step3-actions']}>
                     <button className={`${styles.btn} ${styles.primary}`} onClick={handleDownload}>PDF 다운로드</button>
+                    <button className={styles.btn} onClick={handleDownloadWord}>Word 다운로드 (.docx)</button>
                   </div>
+                  {wordDownloadError && <p className={styles.hint}>{wordDownloadError}</p>}
                 </>
               )}
 
@@ -620,6 +798,36 @@ export default function ProposalWriterPage() {
               <button className={`${styles.btn} ${styles.primary}`} onClick={handleConfirmComplete}>완료하기</button>
             </div>
           </section>
+        </div>
+      )}
+      {showSwitchModal && (
+        <div className={styles.overlay} role="presentation" onClick={cancelTemplateSwitch}>
+          <section
+            className={`${styles.modal} ${styles.small}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="문서 유형 변경 확인"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles['modal-head']}>
+              <h2>문서 유형을 바꿀까요?</h2>
+            </div>
+            <p className={styles['modal-body-text']}>
+              유형을 바꾸면 새 유형에 없는 항목은 사라지고, 새로 필요한 항목은 AI가 다시 초안을 작성합니다.
+              <br />이미 작성한 내용 중 겹치는 항목은 그대로 유지됩니다.
+            </p>
+            <div className={styles['modal-actions']}>
+              <button className={styles.btn} onClick={cancelTemplateSwitch}>취소</button>
+              <button className={`${styles.btn} ${styles.primary}`} onClick={confirmTemplateSwitch}>변경하기</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {loadingText && (
+        <div className={styles['loading-overlay']} role="status" aria-live="polite">
+          <div className={styles.spinner} />
+          <p>{loadingText}</p>
         </div>
       )}
     </div>
