@@ -115,6 +115,7 @@ export default function ProposalWriterPage() {
   const [expiresAt, setExpiresAt] = useState(null);
   const expiryLabel = useMemo(() => formatExpiry(expiresAt), [expiresAt]);
   const [downloadError, setDownloadError] = useState('');
+  const [pdfDownloadError, setPdfDownloadError] = useState('');
   const [wordDownloadError, setWordDownloadError] = useState('');
 
   // 전체화면 로딩 오버레이 — 초안 생성/유형전환/완료 처리 중 공통으로 사용.
@@ -288,6 +289,7 @@ export default function ProposalWriterPage() {
     const newTemplateType = templateSwitchTarget;
     setShowSwitchModal(false);
     setLoadingText('문서 유형을 변경하고 있습니다...');
+    setGenerateError('');
 
     try {
       const defsRes = await getProposalFieldDefinitions(newTemplateType);
@@ -300,12 +302,20 @@ export default function ProposalWriterPage() {
         nextValues[f.field_key] = fieldValues[f.field_key] ?? defaultValueForFieldType(f.field_type);
       });
 
-      // 새 유형에서 처음 등장하는 필드만 AI 초안을 다시 받아 채운다 (기존 필드는 덮어쓰지 않음).
+      // 새 유형에서 처음 등장하는 필드는 AI 초안을 새로 받아 채운다.
+      // CHECKLIST(예: attachment_checklist)는 사용자가 작성한 내용이 아니라 유형별로
+      // 고정된 서류 목록(ATTACHMENT_CHECKLISTS)이라, 기존 필드였어도 항상 새 유형의
+      // 최신 목록으로 갱신한다 — 그대로 두면 예전 유형의 서류 목록이 남아있게 된다.
+      const fieldTypeByKey = {};
+      fields.forEach((f) => { fieldTypeByKey[f.field_key] = f.field_type; });
+
       const generated = await generateProposal({ reportFile, templateType: newTemplateType, fieldValues: nextValues });
       setProposalId(generated?.proposal_id ?? proposalId);
       setLlmStatus(generated?.llm_status ?? llmStatus);
       (generated?.sections ?? []).forEach((section) => {
-        if (!previousFieldKeys.has(section.field_key)) {
+        const isNewField = !previousFieldKeys.has(section.field_key);
+        const isChecklist = fieldTypeByKey[section.field_key] === PROPOSAL_FIELD_TYPES.CHECKLIST;
+        if (isNewField || isChecklist) {
           nextValues[section.field_key] = section.value;
         }
       });
@@ -321,7 +331,14 @@ export default function ProposalWriterPage() {
       setTemplateType(newTemplateType);
       setFieldDefs(fields);
       setFieldValues(nextValues);
-      setActiveOptionalKeys(new Set());
+      // 새 유형에서도 여전히 선택(OPTIONAL) 항목으로 남아있는 것만 유지한다 —
+      // 확인 모달에서 "겹치는 항목은 그대로 유지됩니다"라고 안내한 것과 맞춰야 한다.
+      const stillOptionalKeys = new Set(
+        fields
+          .filter((f) => f.requirement === PROPOSAL_REQUIREMENT.OPTIONAL && activeOptionalKeys.has(f.field_key))
+          .map((f) => f.field_key)
+      );
+      setActiveOptionalKeys(stillOptionalKeys);
       // 커스텀 항목(customFieldsByCategory)은 카테고리 기준이라 유형이 바뀌어도 그대로 유지한다.
     } catch (err) {
       setGenerateError(err.message || '문서 유형 변경에 실패했어요. 잠시 후 다시 시도해주세요.');
@@ -385,6 +402,7 @@ export default function ProposalWriterPage() {
 
   async function handleDownload() {
     setDownloadError('');
+    setPdfDownloadError('');
     try {
       const blob = await downloadProposalPdf(proposalId);
       const url = URL.createObjectURL(blob);
@@ -394,8 +412,15 @@ export default function ProposalWriterPage() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      // PROPOSAL_NOT_FOUND(404) 등 — "만료되었습니다"류 메시지만 보여주고 별도 화면 이동은 하지 않는다 (팀 결정).
-      setDownloadError(err.message || '제안서를 찾을 수 없거나 만료되었어요.');
+      // [자체 리뷰 4차] "만료되었습니다" 전체화면 전환은 팀 결정대로 PROPOSAL_NOT_FOUND일
+      // 때만 해야 한다. 네트워크 오류·서버 500 등 다른 실패까지 전부 이 화면으로 보내면
+      // 제목("만료되었습니다")과 실제 메시지(예: "서버에 연결할 수 없어요")가 어긋난다.
+      // 그 외 실패는 준비완료 화면에 그대로 머물러 인라인 메시지로 재시도할 수 있게 한다.
+      if (err.data?.code === 'PROPOSAL_NOT_FOUND') {
+        setDownloadError(err.message || '제안서를 찾을 수 없거나 만료되었어요.');
+      } else {
+        setPdfDownloadError(err.message || 'PDF 다운로드에 실패했어요. 다시 시도해주세요.');
+      }
     }
   }
 
@@ -409,10 +434,16 @@ export default function ProposalWriterPage() {
       link.download = 'prep-proposal.docx';
       link.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // 백엔드 Word 엔드포인트가 아직 없어 항상 실패한다 (협의 완료, 구현 대기 중).
-      // API가 준비되면 이 catch에서 실패할 일이 없어지므로 별도 코드 수정 없이 정상 동작한다.
-      setWordDownloadError('Word 다운로드는 곧 지원될 예정이에요. 잠시만 기다려주세요.');
+    } catch (err) {
+      // 백엔드가 실제로 /docx를 만들고 정식 PROPOSAL_NOT_FOUND(만료)를 준 경우에는
+      // PDF 만료와 동일하게 처리한다. 그 외(엔드포인트 자체가 아직 없어 나는 오류 등)는
+      // "곧 지원될 예정" 안내로 처리한다 — 나중에 API가 준비되면 이 분기가 자동으로
+      // 올바른 쪽(만료 안내)으로 타게 되므로 별도 코드 수정이 필요 없다.
+      if (err.data?.code === 'PROPOSAL_NOT_FOUND') {
+        setDownloadError(err.message || '제안서를 찾을 수 없거나 만료되었어요.');
+      } else {
+        setWordDownloadError('Word 다운로드는 곧 지원될 예정이에요. 잠시만 기다려주세요.');
+      }
     }
   }
 
@@ -582,6 +613,7 @@ export default function ProposalWriterPage() {
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
                   </select>
+                  {generateError && <p className={styles.hint}>{generateError}</p>}
                 </div>
 
                 <h2 className={styles['section-title']}>문서 구성 (필수)</h2>
@@ -759,6 +791,7 @@ export default function ProposalWriterPage() {
                     <button className={`${styles.btn} ${styles.primary}`} onClick={handleDownload}>PDF 다운로드</button>
                     <button className={styles.btn} onClick={handleDownloadWord}>Word 다운로드 (.docx)</button>
                   </div>
+                  {pdfDownloadError && <p className={styles.hint}>{pdfDownloadError}</p>}
                   {wordDownloadError && <p className={styles.hint}>{wordDownloadError}</p>}
                 </>
               )}
