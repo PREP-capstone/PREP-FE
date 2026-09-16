@@ -64,3 +64,14 @@ export async function completeProposal(proposalId, templateType, sections) {
 export async function downloadProposalPdf(proposalId) {
   return apiClient.getBlob(proposalPath(proposalId, '/pdf'));
 }
+
+/**
+ * GET /api/v1/proposals/{proposalId}/docx
+ * [2026-09-11] 백엔드와 Word 다운로드 지원 논의 완료, API는 아직 구현 전(협의만 끝난 상태).
+ * PDF와 동일한 인증/캐시/만료 규칙을 따르기로 함 — 백엔드가 엔드포인트를 추가하면
+ * 이 함수는 수정 없이 그대로 쓰면 된다. 그 전까지는 호출 시 404/미구현 에러가 나는 게 정상이며,
+ * 화면에서는 "준비 중" 안내로 처리한다.
+ */
+export async function downloadProposalWord(proposalId) {
+  return apiClient.getBlob(proposalPath(proposalId, '/docx'));
+}
