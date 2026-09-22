@@ -91,8 +91,9 @@ export default function ReportContainer() {
 
   if (!data) {
     return (
-      <div style={{ padding: '60px 24px', textAlign: 'center', color: '#666', fontSize: 14 }}>
-        리포트를 불러오는 중이에요...
+      <div className={styles['report-loading']} role="status" aria-live="polite">
+        <span className={styles['report-spinner']} aria-hidden="true"></span>
+        <span>리포트를 불러오는 중이에요...</span>
       </div>
     );
   }
