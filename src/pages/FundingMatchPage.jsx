@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
 import { getFundingRecommendations, getSessionFundingRecommendations } from '../api/fundingApi';
 import { KOREAN_REGIONS } from '../constants/koreanRegions';
+import { useModalDismiss } from '../utils/useModalDismiss';
 
 // BE(app/domain/funding_match.py)가 인식하는 사업 단계 값. 자유 텍스트라도 동작은 하지만,
 // 이 값들과 겹쳐야 "사업 단계 매칭" 가점(+16)을 받는다.
@@ -117,6 +118,8 @@ function FundingMatchContent({ sessionId }) {
 
   const [showCriteria, setShowCriteria] = useState(false);
   const [selectedGrant, setSelectedGrant] = useState(null);
+  const closeGrantModal = useCallback(() => setSelectedGrant(null), []);
+  const grantModalRef = useModalDismiss(Boolean(selectedGrant), closeGrantModal);
 
   const [recommendations, setRecommendations] = useState([]);
   const [recommendedAt, setRecommendedAt] = useState(null);
@@ -366,14 +369,22 @@ function FundingMatchContent({ sessionId }) {
         </section>
       </main>
       {selectedGrant && (
-        <div className={styles.overlay} role="presentation" onClick={() => setSelectedGrant(null)}>
-          <section className={`${styles.modal} ${styles.wideModal} ${styles.scrollable}`} role="dialog" aria-modal="true" aria-label="지원사업 상세보기" onClick={(e) => e.stopPropagation()}>
+        <div className={styles.overlay} role="presentation" onClick={closeGrantModal}>
+          <section
+            ref={grantModalRef}
+            tabIndex={-1}
+            className={`${styles.modal} ${styles.wideModal} ${styles.scrollable}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="지원사업 상세보기"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className={styles['modal-head']}>
               <div>
                 <div className={styles.label}>지원사업 상세</div>
                 <h2>{selectedGrant.title}</h2>
               </div>
-              <button className={styles.btn} onClick={() => setSelectedGrant(null)}>닫기</button>
+              <button className={styles.btn} onClick={closeGrantModal}>닫기</button>
             </div>
             <div className={styles['detail-grid']}>
               <div><span>매칭률</span><b>{selectedGrant.match_score}%</b></div>
