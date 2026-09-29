@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
@@ -16,6 +16,7 @@ import {
   PROPOSAL_REQUIREMENT,
   PROPOSAL_REPORT_MAX_BYTES,
 } from '../constants/proposalOptions';
+import { useModalDismiss } from '../utils/useModalDismiss';
 
 // 사용자가 "+ 항목 추가"로 자유 서술형 항목을 덧붙일 수 있는 카테고리 5개 (팀 확정).
 // [2026-09-11] 이 항목들은 아직 서버로 전송되지 않는다 — proposal_field_definitions에
@@ -124,6 +125,10 @@ export default function ProposalWriterPage() {
   // 편집 중 문서 유형 변경
   const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [templateSwitchTarget, setTemplateSwitchTarget] = useState(null);
+
+  const closeConfirmModal = useCallback(() => setShowConfirmModal(false), []);
+  const confirmModalRef = useModalDismiss(showConfirmModal, closeConfirmModal);
+  const switchModalRef = useModalDismiss(showSwitchModal, cancelTemplateSwitch);
 
   // 카테고리별 사용자 추가 항목 (5개 카테고리 한정, ADDABLE_CATEGORIES 참고)
   const [customFieldsByCategory, setCustomFieldsByCategory] = useState({});
@@ -814,8 +819,10 @@ export default function ProposalWriterPage() {
       </main>
 
       {showConfirmModal && (
-        <div className={styles.overlay} role="presentation" onClick={() => setShowConfirmModal(false)}>
+        <div className={styles.overlay} role="presentation" onClick={closeConfirmModal}>
           <section
+            ref={confirmModalRef}
+            tabIndex={-1}
             className={`${styles.modal} ${styles.small}`}
             role="dialog"
             aria-modal="true"
@@ -829,7 +836,7 @@ export default function ProposalWriterPage() {
               완료 버튼을 누르면 더 이상 수정할 수 없습니다.<br />내용을 다시 확인하셨나요?
             </p>
             <div className={styles['modal-actions']}>
-              <button className={styles.btn} onClick={() => setShowConfirmModal(false)}>취소</button>
+              <button className={styles.btn} onClick={closeConfirmModal}>취소</button>
               <button className={`${styles.btn} ${styles.primary}`} onClick={handleConfirmComplete}>완료하기</button>
             </div>
           </section>
@@ -838,6 +845,8 @@ export default function ProposalWriterPage() {
       {showSwitchModal && (
         <div className={styles.overlay} role="presentation" onClick={cancelTemplateSwitch}>
           <section
+            ref={switchModalRef}
+            tabIndex={-1}
             className={`${styles.modal} ${styles.small}`}
             role="dialog"
             aria-modal="true"

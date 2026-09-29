@@ -833,6 +833,7 @@
   justify-content: center;
   padding: 36px;
   background: rgb(0 0 0 / 42%);
+  animation: modal-overlay-in .15s ease-out;
 }
 
 .modal {
@@ -843,6 +844,22 @@
   border-radius: 10px;
   background: #fff;
   box-shadow: 0 24px 80px rgb(0 0 0 / 22%);
+  animation: modal-pop-in .18s ease-out;
+}
+
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+}
+
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .modal {
+    animation: none;
+  }
 }
 
 .modal.small {

@@ -12,6 +12,7 @@
 .nav-right { display: flex; align-items: center; gap: 8px; }
 .nav-btn { display: flex; align-items: center; gap: 7px; min-height: 44px; font-size: 15px; color: #666; background: #fff; border: 1px solid #e8e8e8; padding: 10px 18px; border-radius: 9px; cursor: pointer; font-family: inherit; transition: background .1s; }
 .nav-btn:hover { background: #f5f5f5; }
+.nav-btn:active { background: #ececec; }
 .nav-btn i { font-size: 16px; }
 .nav-btn.disabled { opacity: .45; cursor: not-allowed; }
 
@@ -332,4 +333,32 @@
 }
 .nav-btn.cta-primary:hover {
   background: #1f5390;
+}
+
+/* ── 리포트 로딩 상태 ── */
+.report-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 24px;
+  color: #666;
+  font-size: 14px;
+}
+.report-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e5e5;
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: report-spin .8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .report-spinner {
+    animation-duration: 1.6s;
+  }
+}
+@keyframes report-spin {
+  to { transform: rotate(360deg); }
 }

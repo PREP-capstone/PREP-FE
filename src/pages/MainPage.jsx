@@ -2,6 +2,13 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './MainPage.module.css';
 
+function handleActivateKey(e, action) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    action();
+  }
+}
+
 export default function MainPage() {
   const navigate = useNavigate();
 
@@ -30,7 +37,13 @@ export default function MainPage() {
           </div>
 
           {/* 핵심 서비스 — 아이디어 검진 */}
-          <div className={styles['main-card']} onClick={() => navigate('/input')}>
+          <div
+            className={styles['main-card']}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/input')}
+            onKeyDown={(e) => handleActivateKey(e, () => navigate('/input'))}
+          >
             <div className={styles['mc-left']}>
               <div className={styles['mc-icon-row']}>
                 <div className={styles['mc-icon']}><i className="ti ti-shield-check"></i></div>
@@ -61,7 +74,13 @@ export default function MainPage() {
           {/* 지원사업 매칭 — 가로 리스트형 */}
           <div className={styles['sub-divider']}>검진 후 이용 가능한 서비스</div>
 
-          <div className={styles['service-row']} onClick={() => navigate('/funding-match')}>
+          <div
+            className={styles['service-row']}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/funding-match')}
+            onKeyDown={(e) => handleActivateKey(e, () => navigate('/funding-match'))}
+          >
             <div className={styles['sr-icon']}><i className="ti ti-wallet"></i></div>
             <div className={styles['sr-body']}>
               <div className={styles['sr-top']}>
@@ -73,7 +92,13 @@ export default function MainPage() {
             <div className={styles['sr-arr']}>바로가기 <i className="ti ti-arrow-right"></i></div>
           </div>
 
-          <div className={styles['service-row']} onClick={() => navigate('/proposal-writer')}>
+          <div
+            className={styles['service-row']}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/proposal-writer')}
+            onKeyDown={(e) => handleActivateKey(e, () => navigate('/proposal-writer'))}
+          >
             <div className={styles['sr-icon']}><i className="ti ti-file-pencil"></i></div>
             <div className={styles['sr-body']}>
               <div className={styles['sr-top']}>
