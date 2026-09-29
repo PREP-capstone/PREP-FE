@@ -35,6 +35,29 @@ export async function generateProposal({ reportFile, templateType, fieldValues }
 }
 
 /**
+ * POST /api/v1/proposals/generate/async (multipart/form-data)
+ * → { job_id, status, template_type, proposal_id, sections, ... }
+ *
+ * PDF 추출과 LLM 생성은 백그라운드에서 처리되므로, 호출부는 job_id를
+ * 저장한 뒤 getProposalGenerationJob()으로 상태를 조회해야 한다.
+ */
+export async function generateProposalAsync({ reportFile, templateType, fieldValues }) {
+  const formData = new FormData();
+  formData.append('report', reportFile);
+  formData.append('template_type', templateType);
+  formData.append('field_values', JSON.stringify(fieldValues ?? {}));
+
+  const res = await apiClient.postForm('/api/v1/proposals/generate/async', formData);
+  return unwrap(res);
+}
+
+/** GET /api/v1/proposals/generate/jobs/{jobId} */
+export async function getProposalGenerationJob(jobId) {
+  const res = await apiClient.get(`/api/v1/proposals/generate/jobs/${encodeURIComponent(jobId)}`);
+  return unwrap(res);
+}
+
+/**
  * POST /api/v1/proposals/{proposalId}/complete
  * payload: { template_type, sections: [{ field_key, value }] }
  * → { proposal_id, expires_at }

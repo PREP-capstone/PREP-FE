@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import styles from './FeaturePages.module.css';
 import {
   getProposalFieldDefinitions,
-  generateProposal,
+  generateProposalAsync,
+  getProposalGenerationJob,
   completeProposal,
   downloadProposalPdf,
   downloadProposalWord,
@@ -90,6 +91,39 @@ function buildSections(fieldDefs, fieldValues) {
   return fieldDefs.map((field) => ({ field_key: field.field_key, value: fieldValues[field.field_key] }));
 }
 
+const PROPOSAL_JOB_POLL_INTERVAL_MS = 1500;
+const PROPOSAL_JOB_MAX_POLLS = 210; // 백엔드 stale 기준 5분보다 조금 여유 있게 조회
+
+function proposalJobError(job) {
+  const error = new Error(job.error_message || '제안서 초안 생성에 실패했어요. 다시 시도해주세요.');
+  error.code = job.error_code;
+  return error;
+}
+
+async function waitForProposalJob(jobId, onStatus, isCancelled) {
+  for (let attempt = 0; attempt < PROPOSAL_JOB_MAX_POLLS; attempt += 1) {
+    if (isCancelled()) return null;
+    const job = await getProposalGenerationJob(jobId);
+    if (isCancelled()) return null;
+    onStatus(job?.status);
+
+    if (job?.status === 'completed') return job;
+    if (job?.status === 'failed') throw proposalJobError(job);
+
+    await new Promise((resolve) => setTimeout(resolve, PROPOSAL_JOB_POLL_INTERVAL_MS));
+  }
+
+  throw proposalJobError({
+    error_code: 'PROPOSAL_JOB_STALE',
+    error_message: '제안서 생성 작업이 오래 걸리고 있습니다. 다시 시도해주세요.',
+  });
+}
+
+function proposalJobStatusText(status) {
+  if (status === 'processing') return 'PDF를 분석하고 제안서 항목을 생성하고 있습니다...';
+  return '제안서 초안 생성 작업을 접수하고 있습니다...';
+}
+
 export default function ProposalWriterPage() {
   const navigate = useNavigate();
 
@@ -105,6 +139,8 @@ export default function ProposalWriterPage() {
   const [generateError, setGenerateError] = useState('');
 
   const [proposalId, setProposalId] = useState(null);
+  const proposalJobIdRef = useRef(null);
+  const proposalGenerationRunRef = useRef(0);
   const [llmStatus, setLlmStatus] = useState(null);
   // attachment_checklist 같은 CHECKLIST 필드는 백엔드가 유형별 고정 목록을 generate
   // 응답으로 채워서 준다(하드코딩 아님). 이 "전체 항목 목록"은 최초 1회만 저장해두고,
@@ -118,6 +154,11 @@ export default function ProposalWriterPage() {
   const [downloadError, setDownloadError] = useState('');
   const [pdfDownloadError, setPdfDownloadError] = useState('');
   const [wordDownloadError, setWordDownloadError] = useState('');
+
+  useEffect(() => () => {
+    // 페이지를 벗어나면 진행 중인 polling이 이후 상태를 반영하지 않도록 무효화한다.
+    proposalGenerationRunRef.current += 1;
+  }, []);
 
   // 전체화면 로딩 오버레이 — 초안 생성/유형전환/완료 처리 중 공통으로 사용.
   const [loadingText, setLoadingText] = useState('');
@@ -185,6 +226,9 @@ export default function ProposalWriterPage() {
 
   async function handleGoToEdit() {
     if (!reportFile || !templateType) return;
+    const generationRun = proposalGenerationRunRef.current + 1;
+    proposalGenerationRunRef.current = generationRun;
+    const isCancelled = () => proposalGenerationRunRef.current !== generationRun;
     setIsGenerating(true);
     setLoadingText('AI가 검진 리포트를 바탕으로 초안을 작성하고 있습니다...');
     setGenerateError('');
@@ -198,9 +242,17 @@ export default function ProposalWriterPage() {
         initialValues[f.field_key] = defaultValueForFieldType(f.field_type);
       });
 
-      const generated = await generateProposal({ reportFile, templateType, fieldValues: initialValues });
+      const accepted = await generateProposalAsync({ reportFile, templateType, fieldValues: initialValues });
+      if (!accepted?.job_id) throw new Error('제안서 생성 작업 ID를 받지 못했어요. 다시 시도해주세요.');
+      proposalJobIdRef.current = accepted.job_id;
+      setLoadingText(proposalJobStatusText(accepted.status));
+      const generated = await waitForProposalJob(accepted.job_id, (status) => {
+        setLoadingText(proposalJobStatusText(status));
+      }, isCancelled);
+      if (!generated) return;
+      if (!generated?.proposal_id) throw new Error('생성된 제안서 ID를 받지 못했어요. 다시 시도해주세요.');
       setProposalId(generated?.proposal_id ?? null);
-      setLlmStatus(generated?.llm_status ?? 'ok');
+      setLlmStatus(generated?.llm_status ?? null);
 
       // [2026-09-10 백엔드 확인] section.generated_text가 아니라 section.value로 온다.
       // 또한 CHECKLIST/TABLE도 이 값을 그대로 받아야 해서(예: attachment_checklist는
@@ -295,6 +347,9 @@ export default function ProposalWriterPage() {
   async function confirmTemplateSwitch() {
     const newTemplateType = templateSwitchTarget;
     setShowSwitchModal(false);
+    const generationRun = proposalGenerationRunRef.current + 1;
+    proposalGenerationRunRef.current = generationRun;
+    const isCancelled = () => proposalGenerationRunRef.current !== generationRun;
     setLoadingText('문서 유형을 변경하고 있습니다...');
     setGenerateError('');
 
@@ -316,9 +371,17 @@ export default function ProposalWriterPage() {
       const fieldTypeByKey = {};
       fields.forEach((f) => { fieldTypeByKey[f.field_key] = f.field_type; });
 
-      const generated = await generateProposal({ reportFile, templateType: newTemplateType, fieldValues: nextValues });
+      const accepted = await generateProposalAsync({ reportFile, templateType: newTemplateType, fieldValues: nextValues });
+      if (!accepted?.job_id) throw new Error('제안서 생성 작업 ID를 받지 못했어요. 다시 시도해주세요.');
+      proposalJobIdRef.current = accepted.job_id;
+      setLoadingText(proposalJobStatusText(accepted.status));
+      const generated = await waitForProposalJob(accepted.job_id, (status) => {
+        setLoadingText(proposalJobStatusText(status));
+      }, isCancelled);
+      if (!generated) return;
+      if (!generated?.proposal_id) throw new Error('생성된 제안서 ID를 받지 못했어요. 다시 시도해주세요.');
       setProposalId(generated?.proposal_id ?? proposalId);
-      setLlmStatus(generated?.llm_status ?? llmStatus);
+      setLlmStatus(generated?.llm_status ?? null);
       (generated?.sections ?? []).forEach((section) => {
         const isNewField = !previousFieldKeys.has(section.field_key);
         const isChecklist = fieldTypeByKey[section.field_key] === PROPOSAL_FIELD_TYPES.CHECKLIST;
