@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cx } from '../utils/cx';
 import styles from './ReportPage.module.css';
@@ -367,6 +367,8 @@ export default function ReportPage({ data, expiresAt = null }) {
                 </div>
               )}
             </div>
+            {/* GATE FAIL 근거 조문 — legal_basis가 없으면(백엔드 PR #140 배포 전 응답 포함) 렌더링하지 않는다 */}
+            {isFail && gate.legal_basis && <GateLegalBasis basis={gate.legal_basis} expanded={isPrintMode} />}
             {isFail && (gate.avoidance_redesign || gate.avoidance_certification) && (
               <div className={styles.grounds} style={{ marginTop: 12 }}>
                 {gate.avoidance_redesign && (
@@ -752,6 +754,71 @@ function IndBar({ level }) {
         const filled = level === 'high' ? true : level === 'mid' ? i < 2 : i < 1;
         return <div key={i} className={cx(styles, 'bar', filled && level)} />;
       })}
+    </div>
+  );
+}
+
+// PDF 추출 원문은 \r\n 줄바꿈과 연속 공백이 많아 한 문단으로 합쳐서 보여준다.
+function normalizeQuote(text) {
+  return String(text)
+    .replace(/\s+/g, ' ')
+    .replace(/ ([,.])/g, '$1')
+    .trim();
+}
+
+// GATE 판정 근거 조문 1건 (gate.legal_basis)
+// - 제목 줄: {title} {article}  (document_id는 화면에 쓰지 않음)
+// - quote_status === 'FOUND'  → quote를 인용문으로, 4줄까지 보여주고 "더보기"로 펼침
+// - 그 외 상태              → quote_message를 안내 문구로 표시
+function GateLegalBasis({ basis, expanded: forceExpanded = false }) {
+  const [open, setOpen] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const quoteRef = useRef(null);
+
+  const heading = [basis.title, basis.article].filter(Boolean).join(' ') || '근거 문서';
+  const quote = basis.quote_status === 'FOUND' && basis.quote ? normalizeQuote(basis.quote) : null;
+  const message = basis.quote_message || '근거 원문을 불러오지 못했습니다.';
+  const expanded = open || forceExpanded;
+
+  // 4줄 clamp 상태에서 실제로 넘치는지 측정해, 넘칠 때만 "더보기" 버튼을 띄운다.
+  useLayoutEffect(() => {
+    const el = quoteRef.current;
+    if (!el || open) return;
+    setOverflowing(el.scrollHeight > el.clientHeight + 1);
+  }, [quote, open]);
+
+  return (
+    <div className={styles['gate-basis']}>
+      <div className={styles['gate-basis-label']}>
+        <i className="ti ti-file-text"></i>판정 근거 조문
+      </div>
+      <div className={styles['gate-basis-title']}>{heading}</div>
+      {quote ? (
+        <>
+          <blockquote
+            ref={quoteRef}
+            className={cx(styles, 'gate-basis-quote', !expanded && 'clamped')}
+          >
+            {quote}
+          </blockquote>
+          {(overflowing || open) && (
+            <button
+              type="button"
+              className={styles['gate-basis-toggle']}
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+            >
+              {open ? '접기' : '더보기'}
+              <i className={`ti ti-chevron-${open ? 'up' : 'down'}`}></i>
+            </button>
+          )}
+        </>
+      ) : (
+        <div className={styles['gate-basis-message']}>
+          <i className="ti ti-info-circle"></i>
+          <span>{message}</span>
+        </div>
+      )}
     </div>
   );
 }

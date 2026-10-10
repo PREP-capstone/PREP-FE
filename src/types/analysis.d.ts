@@ -108,6 +108,23 @@ export interface EvaluateRequest {
   session_id: string;
 }
 
+export type LegalBasisQuoteStatus = 'FOUND' | 'UNTRUSTED_DOCUMENT' | 'MISSING_CHUNK' | 'LOOKUP_FAILED';
+
+/** 근거 조문 1건 — 백엔드 app/schemas/common.py LegalBasis와 같은 형식 */
+export interface LegalBasis {
+  /** 근거 문서 ID (화면 표시용 아님) */
+  document_id: string;
+  /** 근거 문서명 — 화면에는 이 값을 표시 */
+  title?: string | null;
+  /** 조문 (예: IV.3, III.2.나) */
+  article: string;
+  /** 지침 원문 (PDF 추출본, \r\n 포함) */
+  quote?: string | null;
+  quote_status?: LegalBasisQuoteStatus | null;
+  /** 원문이 없을 때의 안내 문구. FOUND면 null */
+  quote_message?: string | null;
+}
+
 export interface GateResult {
   data_type?: string | null;
   function_type?: string | null;
@@ -118,6 +135,8 @@ export interface GateResult {
   avoidance_redesign?: string | null;
   avoidance_certification?: string | null;
   reasoning?: string[];
+  /** 판정 근거 조문 (PR #140). 배포 전 응답엔 없음 */
+  legal_basis?: LegalBasis | null;
 }
 
 export interface RegulatoryRiskResult {
