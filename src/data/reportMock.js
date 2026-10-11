@@ -160,7 +160,7 @@ export const failReport = {
       'MVP는 진단 대신 수면 기록과 일반 정보 제공으로 범위를 낮추는 방향이 안전합니다.',
     ],
 
-    // PR #140 legal_basis — 침습 하드체크 FAIL이라 III.2.나 (원문은 BE data/rag/evidence_chunks_draft.csv 청크)
+    // BE PR #140 legal_basis — 침습 하드체크 FAIL이라 III.2.나 (원문은 BE data/rag/evidence_chunks_draft.csv 청크)
     legal_basis: {
       document_id: 'kr-mfds-wellness-0091-03-20260212',
       title: '의료기기와 개인용 건강관리(웰니스) 제품 판단기준',

@@ -80,10 +80,29 @@
 .gate-basis-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #8a2a1d; margin-bottom: 6px; }
 .gate-basis-label i { font-size: 14px; }
 .gate-basis-title { font-size: 15px; font-weight: 700; color: #111; line-height: 1.5; word-break: keep-all; }
-.gate-basis-quote { margin: 10px 0 0; padding: 0 0 0 12px; border-left: 2px solid #e2e2e2; color: #444; font-size: 14px; line-height: 1.75; word-break: keep-all; }
-.gate-basis-quote.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
-.gate-basis-toggle { display: inline-flex; align-items: center; gap: 4px; margin: 8px 0 0 12px; padding: 0; background: none; border: 0; color: #2563a8; font-size: 13px; font-weight: 700; cursor: pointer; }
-.gate-basis-toggle:hover { text-decoration: underline; }
+.gate-basis-quote {
+  margin: 10px 0 0; padding: 12px 14px; max-height: 240px; overflow-y: auto;
+  border: 1px solid #ececec; border-radius: 6px; color: #444; font-size: 14px; line-height: 1.7; word-break: keep-all;
+  /* 스크롤 그림자: 위·아래에 가려진 원문이 있을 때만 그 쪽 가장자리에 그림자가 생긴다 (JS 없이 CSS만으로) */
+  background:
+    linear-gradient(#fafafa 30%, rgba(250, 250, 250, 0)) center top,
+    linear-gradient(rgba(250, 250, 250, 0), #fafafa 70%) center bottom,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, .16), rgba(0, 0, 0, 0)) center top,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, .16), rgba(0, 0, 0, 0)) center bottom;
+  background-color: #fafafa;
+  background-repeat: no-repeat;
+  background-size: 100% 36px, 100% 36px, 100% 14px, 100% 14px;
+  background-attachment: local, local, scroll, scroll;
+}
+.gate-basis-quote:focus-visible { outline: 2px solid #2563a8; outline-offset: 2px; }
+.gate-basis-line { margin: 0; }
+.gate-basis-line + .gate-basis-line { margin-top: 4px; }
+/* 목록 기호 단계별 들여쓰기 — 둘째 줄부터 기호 뒤에 맞춰 정렬(hanging indent) */
+.gate-basis-line.lv0 { margin-top: 8px; padding-left: 1.1em; text-indent: -1.1em; }
+.gate-basis-line.lv1 { margin-top: 6px; padding-left: calc(0.8em + 1.1em); text-indent: -1.1em; }
+.gate-basis-line.title { font-weight: 700; color: #222; }
+.gate-basis-line.lv2 { padding-left: calc(1.8em + 1em); text-indent: -1em; }
+.gate-basis-line:first-child { margin-top: 0; }
 .gate-basis-message { display: flex; gap: 6px; align-items: flex-start; margin-top: 10px; color: #666; font-size: 14px; line-height: 1.6; }
 .gate-basis-message i { font-size: 15px; margin-top: 3px; flex-shrink: 0; }
 
@@ -278,7 +297,7 @@
     max-height: none;
     overflow: visible;
   }
-  .gate-basis-toggle { display: none; }
+  .gate-basis-quote { max-height: none; overflow: visible; background: #fafafa; }
   .section,
   .idea-header,
   .fail-guidance,
