@@ -367,6 +367,8 @@ export default function ReportPage({ data, expiresAt = null }) {
                 </div>
               )}
             </div>
+            {/* GATE FAIL 근거 조문 — legal_basis가 없으면(백엔드 PR #140 배포 전 응답 포함) 렌더링하지 않는다 */}
+            {isFail && gate.legal_basis && <GateLegalBasis basis={gate.legal_basis} />}
             {isFail && (gate.avoidance_redesign || gate.avoidance_certification) && (
               <div className={styles.grounds} style={{ marginTop: 12 }}>
                 {gate.avoidance_redesign && (
@@ -752,6 +754,82 @@ function IndBar({ level }) {
         const filled = level === 'high' ? true : level === 'mid' ? i < 2 : i < 1;
         return <div key={i} className={cx(styles, 'bar', filled && level)} />;
       })}
+    </div>
+  );
+}
+
+// ── 근거 원문 정리 ──
+// PDF 추출 원문은 줄이 글자 수 기준으로 끊겨 있고(\r\n), 목록 기호(○ ￭ ∙ 등)로 항목이 나뉜다.
+// 줄바꿈을 전부 합치면 목록 구조가 사라지고, 그대로 두면 문장 중간에서 꺾이므로
+// "목록 기호로 시작하는 줄"과 "앞 줄이 문장 끝(다.)으로 끝난 줄"에서만 새 줄을 시작하고 나머지는 이어 붙인다.
+const QUOTE_MARKER_LEVEL = [
+  [/^[◎○]/, 0], // 큰 항목
+  [/^[￭■□▪]/, 1], // 중간 항목
+  [/^[∙•·‧]/, 2], // 세부 예시
+];
+
+function quoteLineLevel(line) {
+  const hit = QUOTE_MARKER_LEVEL.find(([re]) => re.test(line));
+  return hit ? hit[1] : null;
+}
+
+function splitQuoteLines(text) {
+  const rawLines = String(text)
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    // "‧‧∙ 웨어러블" 같은 추출 잡음 → "∙ 웨어러블"
+    .map((line) => line.replace(/^[‧·∙•]+\s*/, (m) => (m.trim() ? '∙ ' : m)))
+    .filter(Boolean);
+
+  const lines = [];
+  for (const line of rawLines) {
+    const level = quoteLineLevel(line);
+    const prev = lines[lines.length - 1];
+    // 새 줄 시작: 목록 기호 / 앞 줄이 문장 끝(다.) / 앞 줄이 "3. 제목" 같은 번호 제목
+    const startsNew = !prev || level !== null || /다\.$/.test(prev.text) || /^\d+\.\s/.test(prev.text);
+    if (startsNew) {
+      lines.push({ text: line, level });
+    } else {
+      prev.text = `${prev.text} ${line}`;
+    }
+  }
+  return lines.map((l) => {
+    // "침습적인 , 경우"처럼 줄바꿈 때문에 생긴 문장부호 앞 공백 제거
+    const text = l.text.replace(/ ([,.])/g, '$1');
+    // 짧은 항목("￭ 침습 여부")은 소제목으로 굵게, 긴 항목은 본문처럼 둔다
+    return { ...l, text, isTitle: l.level !== null && l.level <= 1 && text.length <= 30 };
+  });
+}
+
+// GATE 판정 근거 조문 1건 (gate.legal_basis)
+// - 제목 줄: {title} {article}  (document_id는 화면에 쓰지 않음)
+// - quote_status === 'FOUND'  → 원문 전체를 목록 구조대로 나눠 고정 높이 스크롤 박스에 표시
+// - 그 외 상태              → quote_message를 안내 문구로 표시
+function GateLegalBasis({ basis }) {
+  const heading = [basis.title, basis.article].filter(Boolean).join(' ') || '근거 문서';
+  const lines = basis.quote_status === 'FOUND' && basis.quote ? splitQuoteLines(basis.quote) : [];
+  const message = basis.quote_message || '근거 원문을 불러오지 못했습니다.';
+
+  return (
+    <div className={styles['gate-basis']}>
+      <div className={styles['gate-basis-label']}>
+        <i className="ti ti-file-text"></i>판정 근거 조문
+      </div>
+      <div className={styles['gate-basis-title']}>{heading}</div>
+      {lines.length > 0 ? (
+        <blockquote className={styles['gate-basis-quote']} tabIndex={0} aria-label={`${heading} 원문`}>
+          {lines.map((line, i) => (
+            <p key={i} className={cx(styles, 'gate-basis-line', line.level !== null && `lv${line.level}`, line.isTitle && 'title')}>
+              {line.text}
+            </p>
+          ))}
+        </blockquote>
+      ) : (
+        <div className={styles['gate-basis-message']}>
+          <i className="ti ti-info-circle"></i>
+          <span>{message}</span>
+        </div>
+      )}
     </div>
   );
 }
