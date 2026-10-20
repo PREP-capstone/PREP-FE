@@ -9,6 +9,11 @@ import styles from './ReportPage.module.css';
 //         section_links, next_actions }
 // GATE FAIL이면 data_feasibility/market_feasibility/business_model이 null로 온다.
 
+// 화면 맨 아래 주의 문구. 한 줄 요약은 항상 보이고, 누르면 요약에 없는 나머지 안내(DETAIL)만 이어서 펼쳐진다.
+const AI_NOTICE_SUMMARY = '이 리포트는 AI와 자체 데이터를 바탕으로 만든 참고 자료입니다. 검증 후 활용하세요.';
+const AI_NOTICE_DETAIL =
+  '틀린 내용이 있을 수 있으니, 중요한 결정을 내리실 때는 꼭 한 번 더 직접 확인하세요. 저희 DB에 비슷한 서비스가 보이지 않더라도 지식재산권 문제가 없다는 뜻은 아니니, 출시 전에는 전문가와 함께 살펴보세요.';
+
 const TABS = [
   { id: 'r', label: '규제 위험도' },
   { id: 'd', label: '데이터 확보' },
@@ -123,6 +128,7 @@ export default function ReportPage({ data, expiresAt = null }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('r');
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
 
   const {
     session = {},
@@ -741,6 +747,38 @@ export default function ReportPage({ data, expiresAt = null }) {
             )}
           </div>
         )}
+
+        {/* 화면 맨 아래 주의 문구 — 한 줄 요약, 누르면 전체 안내가 펼쳐진다. 인쇄(PDF) 시에는 전체를 펼친 채로 포함. */}
+        <div className={styles['ai-notice']}>
+          {isPrintMode ? (
+            <div className={styles['ai-notice-body']}>
+              <i className="ti ti-alert-triangle"></i>
+              <span>{`${AI_NOTICE_SUMMARY} ${AI_NOTICE_DETAIL}`}</span>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={styles['ai-notice-toggle']}
+                onClick={() => setNoticeOpen((open) => !open)}
+                aria-expanded={noticeOpen}
+                aria-controls="ai-notice-detail"
+              >
+                <i className="ti ti-alert-triangle"></i>
+                <span className={styles['ai-notice-summary']}>{AI_NOTICE_SUMMARY}</span>
+                <span className={styles['ai-notice-more']}>
+                  {noticeOpen ? '접기' : '자세히 보기'}
+                  <i className={`ti ${noticeOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`}></i>
+                </span>
+              </button>
+              {noticeOpen && (
+                <div id="ai-notice-detail" className={styles['ai-notice-detail']}>
+                  {AI_NOTICE_DETAIL}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
       </div>
     </div>
