@@ -157,11 +157,19 @@ export default function ReportPage({ data, expiresAt = null }) {
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
   const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
   const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
-  const marketMatchDescription = matchScopeDescription(
-    marketFeas?.match_scope_description,
-    marketFeas?.match_level,
-    marketFeas?.payment_precedent,
-  );
+  // 경쟁사 매칭 결과가 없는 상태(insufficient_data). 서버 응답에는 match_level이 포함되지 않고(내부용),
+  // 이 경우에만 market_realism_grade가 null로 내려온다. 로컬 판정 mock은 match_level을 직접 준다.
+  const marketInsufficient =
+    !!marketFeas && (marketFeas.match_level === 'insufficient_data' || marketFeas.market_realism_grade == null);
+  // 매칭 결과가 없을 때는 서버가 보내는 설명 대신 고정 문구를 쓴다 (아래 안내 박스와 내용이 겹치지 않도록).
+  const marketMatchDescription =
+    marketInsufficient
+      ? MATCH_SCOPE_DESCRIPTIONS.insufficient_data
+      : matchScopeDescription(
+          marketFeas?.match_scope_description,
+          marketFeas?.match_level,
+          marketFeas?.payment_precedent,
+        );
   const bmMatchDescription = matchScopeDescription(bm?.match_scope_description, bm?.match_level);
   const retryInputPath = session.session_id ? `/input?session=${encodeURIComponent(session.session_id)}` : '/input';
 
@@ -638,7 +646,7 @@ export default function ReportPage({ data, expiresAt = null }) {
                       )}
                   </div>
 
-                  {marketFeas.match_level === 'insufficient_data' && (
+                  {marketInsufficient && (
                     <div className={styles['no-match-notice']} role="note">
                       <i className="ti ti-info-circle"></i>
                       <span>{MARKET_NO_MATCH_NOTICE}</span>
