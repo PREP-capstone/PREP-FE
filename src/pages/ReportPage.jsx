@@ -157,11 +157,15 @@ export default function ReportPage({ data, expiresAt = null }) {
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
   const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
   const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
-  const marketMatchDescription = matchScopeDescription(
-    marketFeas?.match_scope_description,
-    marketFeas?.match_level,
-    marketFeas?.payment_precedent,
-  );
+  // 매칭 결과가 없을 때는 서버가 보내는 설명 대신 고정 문구를 쓴다 (아래 안내 박스와 내용이 겹치지 않도록).
+  const marketMatchDescription =
+    marketFeas?.match_level === 'insufficient_data'
+      ? MATCH_SCOPE_DESCRIPTIONS.insufficient_data
+      : matchScopeDescription(
+          marketFeas?.match_scope_description,
+          marketFeas?.match_level,
+          marketFeas?.payment_precedent,
+        );
   const bmMatchDescription = matchScopeDescription(bm?.match_scope_description, bm?.match_level);
   const retryInputPath = session.session_id ? `/input?session=${encodeURIComponent(session.session_id)}` : '/input';
 
