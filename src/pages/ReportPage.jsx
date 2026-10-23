@@ -36,7 +36,7 @@ const MATCH_SCOPE_DESCRIPTIONS = {
   exact_match: '카테고리, 세부 기능, 타깃, 서비스 형태가 모두 같은 선례를 기준으로 비교했습니다.',
   relaxed_service_type: '서비스 형태는 제외하고 카테고리, 세부 기능, 타깃이 같은 선례를 기준으로 비교했습니다.',
   relaxed_category_only: '타깃과 서비스 형태는 제외하고 카테고리와 세부 기능이 같은 선례를 기준으로 비교했습니다.',
-  insufficient_data: '아직 비교할 수 있는 유사 선례가 부족해 제한된 기준으로 검토했습니다.',
+  insufficient_data: '비교 기준에 맞는 선례가 없어 매칭 범위를 정하지 못했습니다.',
   target_only: '타깃이 같은 선례를 기준으로 참고했습니다.',
   category_only: '카테고리가 같은 선례를 기준으로 참고했습니다.',
   service_type_only: '서비스 형태가 같은 선례를 기준으로 참고했습니다.',
@@ -55,6 +55,10 @@ const MATCH_SCOPE_FALLBACKS = [
   ['insufficient', MATCH_SCOPE_DESCRIPTIONS.insufficient_data],
   ['데이터 부족', MATCH_SCOPE_DESCRIPTIONS.insufficient_data],
 ];
+
+// 경쟁사 매칭이 insufficient_data일 때만 시장 현실성 탭에 추가로 보여주는 안내 문구.
+const MARKET_NO_MATCH_NOTICE =
+  '현재 DB에서는 유사한 서비스를 찾지 못했습니다. 경쟁자가 없다는 뜻이 아니라 아직 수집되지 않았을 수 있으니, 직접 시장 조사를 함께 진행하세요.';
 
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
 function formatExpiry(value) {
@@ -633,6 +637,13 @@ export default function ReportPage({ data, expiresAt = null }) {
                         </div>
                       )}
                   </div>
+
+                  {marketFeas.match_level === 'insufficient_data' && (
+                    <div className={styles['no-match-notice']} role="note">
+                      <i className="ti ti-info-circle"></i>
+                      <span>{MARKET_NO_MATCH_NOTICE}</span>
+                    </div>
+                  )}
 
                   {(marketFeas.competitor_cards?.length ?? 0) > 0 && (
                     <div className={styles['comp-grid']}>

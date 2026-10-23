@@ -281,6 +281,23 @@
 .mkt-desc { font-size: 11px; color: #888; }
 .mkt-scope { font-size: 13px; line-height: 1.55; color: #333; font-weight: 600; word-break: keep-all; }
 
+/* 경쟁사 매칭 결과가 없을 때(insufficient_data) 시장 현실성 탭에 추가로 띄우는 안내 */
+.no-match-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #fffaf0;
+  border: 1px solid #f0e2c0;
+  border-radius: 12px;
+  color: #6b5320;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+.no-match-notice i { margin-top: 2px; color: #b8892b; flex-shrink: 0; }
+
 @media print {
   .page { background: #fff; }
   .topnav { display: none; }
