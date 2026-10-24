@@ -899,6 +899,15 @@
   color: #111;
   font-size: 22px;
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.modal-head > .btn {
+  flex: 0 0 auto;
+  min-width: 68px;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .preview {
