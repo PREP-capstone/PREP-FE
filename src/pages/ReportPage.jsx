@@ -128,12 +128,12 @@ function maxLevel(...levels) {
   return levels.filter(Boolean).reduce((acc, cur) => (order[cur] > order[acc] ? cur : acc), 'low');
 }
 
-function ExpandableText({ children, className }) {
+function ExpandableText({ children, className, contentTag: ContentTag = 'div', contentProps }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <div className={`${className} ${styles['expandable-text']} ${expanded ? styles.expanded : ''}`}>
-      <div className={styles['expandable-content']}>{children}</div>
+      <ContentTag className={styles['expandable-content']} {...contentProps}>{children}</ContentTag>
       <button
         type="button"
         className={styles['expandable-toggle']}
@@ -895,7 +895,11 @@ function GateLegalBasis({ basis }) {
       </div>
       <div className={styles['gate-basis-title']}>{heading}</div>
       {lines.length > 0 ? (
-        <ExpandableText className={styles['gate-basis-quote']}>
+        <ExpandableText
+          className={styles['gate-basis-quote']}
+          contentTag="blockquote"
+          contentProps={{ tabIndex: 0, 'aria-label': `${heading} 원문` }}
+        >
           {lines.map((line, i) => (
             <p key={i} className={cx(styles, 'gate-basis-line', line.level !== null && `lv${line.level}`, line.isTitle && 'title')}>
               {line.text}
