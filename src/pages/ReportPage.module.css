@@ -36,7 +36,7 @@
 .indicators { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
 .ind { border: 1px solid #e8e8e8; border-radius: 10px; padding: 20px 22px; background: #fff; }
 .ind.inactive { opacity: .3; pointer-events: none; }
-.ind-name { font-size: 13px; color: #666; margin-bottom: 8px; }
+.ind-name { min-width: 0; font-size: 13px; color: #666; margin-bottom: 8px; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
 .ind-val { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
 .ind-val.high { color: #c0392b; }
 .ind-val.mid { color: #d97706; }
@@ -70,8 +70,8 @@
 
 /* ── GATE 판정 박스 ── */
 .gate-box { background: #f8f8f8; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; border-left: 3px solid #2563a8; }
-.gate-box-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.gate-box-title { font-size: 12px; font-weight: 700; color: #666; letter-spacing: .4px; }
+.gate-box-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; flex-wrap: wrap; }
+.gate-box-title { min-width: 0; font-size: 12px; font-weight: 700; color: #666; letter-spacing: .4px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
 .gate-grounds { display: flex; flex-direction: column; gap: 6px; }
 .gate-ground { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: #555; line-height: 1.7; }
 
@@ -270,8 +270,8 @@
 
 /* ── §03 시장 현실성 지표 카드 ── */
 .mkt-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.mkt-card { border-radius: 10px; padding: 14px; border: 1px solid #e8e8e8; background: #fff; text-align: center; }
-.mkt-name { font-size: 11px; color: #888; margin-bottom: 6px; }
+.mkt-card { min-width: 0; border-radius: 10px; padding: 14px; border: 1px solid #e8e8e8; background: #fff; text-align: center; }
+.mkt-name { min-width: 0; font-size: 11px; color: #888; margin-bottom: 6px; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
 .mkt-level { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
 .mkt-card.high .mkt-level { color: #2a7a2a; }
 .mkt-card.mid .mkt-level { color: #d97706; }
@@ -280,7 +280,7 @@
 .mkt-card.platform.safe .mkt-level { color: #2a7a2a; }
 .mkt-card.platform.unknown .mkt-level { color: #d97706; }
 .mkt-desc { font-size: 11px; color: #888; }
-.mkt-scope { font-size: 13px; line-height: 1.55; color: #333; font-weight: 600; word-break: keep-all; }
+.mkt-scope { min-width: 0; font-size: 13px; line-height: 1.55; color: #333; font-weight: 600; word-break: keep-all; overflow-wrap: anywhere; }
 
 /* 긴 설명과 근거 원문은 모바일에서 먼저 요약하고 필요할 때 펼친다. */
 .expandable-text {
