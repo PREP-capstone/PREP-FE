@@ -91,6 +91,24 @@ export async function evaluateSession(sessionId) {
   return unwrap(res);
 }
 
+/** GET /api/v1/analysis-sessions/{sessionId}/report.pdf → 서버 생성 PDF */
+export async function downloadAnalysisReportPdf(sessionId) {
+  const response = await apiClient.getBlobResponse(sessionPath(sessionId, '/report.pdf'));
+  const disposition = response.headers.get('content-disposition') || '';
+  const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const quotedName = disposition.match(/filename="([^"]+)"/i)?.[1];
+  const plainName = disposition.match(/filename=([^;]+)/i)?.[1]?.trim();
+  let filename = encodedName || quotedName || plainName;
+  if (filename) {
+    try {
+      filename = decodeURIComponent(filename);
+    } catch {
+      // 헤더 파일명이 이미 디코딩된 경우 원문을 사용한다.
+    }
+  }
+  return { blob: response.blob, filename: filename || `PREP_아이디어검진_${sessionId}.pdf` };
+}
+
 export const evaluateAnalysis = evaluateSession;
 
 /**

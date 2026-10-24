@@ -662,6 +662,45 @@
   color: #2563a8;
 }
 
+/* ── 서버 PDF 다운로드 오류 안내 ── */
+.pdf-error {
+  max-width: 1120px;
+  margin: 12px auto 0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff5f5;
+  border: 1px solid #f4c7c7;
+  border-radius: 8px;
+  color: #8a2a1d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.pdf-error > i {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+.pdf-error > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pdf-error-retry {
+  flex: 0 0 auto;
+  min-height: 36px;
+  margin-left: auto;
+  padding: 7px 12px;
+  border: 1px solid #dca8a8;
+  border-radius: 7px;
+  background: #fff;
+  color: #8a2a1d;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pdf-error-retry:hover { background: #fff0f0; }
+.pdf-error-retry:disabled { opacity: .55; cursor: not-allowed; }
+
 /* ── 하단 안내 CTA (지원사업 매칭 유도) ── */
 .report-footer-cta {
   margin-top: 28px;
@@ -760,6 +799,20 @@
   align-items: flex-start;
   gap: 8px;
   padding: 12px 16px;
+}
+
+@media (max-width: 720px) {
+  .pdf-error {
+    margin: 12px 16px 0;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .pdf-error-retry {
+    width: 100%;
+    min-height: 44px;
+    margin-left: 0;
+  }
 }
 
 /* ── 리포트 로딩 상태 ── */

@@ -60,7 +60,7 @@ async function request(path, { method = 'GET', body, headers, timeoutMs = 20000 
  * 응답 자체가 파일(binary)인 엔드포인트용 (예: GET /proposals/{id}/pdf).
  * 성공(2xx)이면 Blob을 반환하고, 실패면 JSON 에러 바디를 파싱해 ApiError를 던진다.
  */
-async function requestBlob(path, { method = 'GET', headers, timeoutMs = 20000 } = {}) {
+async function requestBlob(path, { method = 'GET', headers, timeoutMs = 20000, includeHeaders = false } = {}) {
   const res = await doFetch(path, { method, body: undefined, headers, timeoutMs });
 
   if (!res.ok) {
@@ -69,7 +69,8 @@ async function requestBlob(path, { method = 'GET', headers, timeoutMs = 20000 } 
     throw new ApiError(extractApiErrorMessage(res.status, data), res.status, data);
   }
 
-  return res.blob();
+  const blob = await res.blob();
+  return includeHeaders ? { blob, headers: res.headers } : blob;
 }
 
 export const apiClient = {
@@ -80,6 +81,8 @@ export const apiClient = {
   postForm: (path, formData, opts) => request(path, { ...opts, method: 'POST', body: formData }),
   /** 응답이 JSON이 아니라 파일 자체인 GET 요청용 (예: PDF 다운로드). */
   getBlob: (path, opts) => requestBlob(path, { ...opts, method: 'GET' }),
+  /** 파일과 함께 응답 헤더(Content-Disposition 등)가 필요한 GET 요청용. */
+  getBlobResponse: (path, opts) => requestBlob(path, { ...opts, method: 'GET', includeHeaders: true }),
 };
 
 /** 표준 래퍼 응답 { isSuccess, code, message, result } 에서 result만 꺼낸다 */
