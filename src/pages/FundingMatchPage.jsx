@@ -116,7 +116,6 @@ function FundingMatchContent({ sessionId }) {
   const [startupStage, setStartupStage] = useState('');
   const [keywordsText, setKeywordsText] = useState('');
 
-  const [showCriteria, setShowCriteria] = useState(false);
   const [selectedGrant, setSelectedGrant] = useState(null);
   const closeGrantModal = useCallback(() => setSelectedGrant(null), []);
   const grantModalRef = useModalDismiss(Boolean(selectedGrant), closeGrantModal);
@@ -190,9 +189,6 @@ function FundingMatchContent({ sessionId }) {
   const search = () => findFunding({ file: reportFile, region, startupStage, keywords: keywordsText });
 
   const recommendedAtLabel = formatRecommendedAt(recommendedAt);
-  const matchScores = recommendations.map((g) => g.match_score).filter((n) => typeof n === 'number');
-  const maxMatch = matchScores.length ? Math.max(...matchScores) : null;
-  const avgMatch = matchScores.length ? Math.round(matchScores.reduce((a, b) => a + b, 0) / matchScores.length) : null;
   const maxAmount = recommendations.map((g) => g.max_amount).filter((n) => typeof n === 'number');
   const maxAmountLabel = maxAmount.length ? `${Math.round(Math.max(...maxAmount) / 10000).toLocaleString('ko-KR')}만원` : '-';
   const closingSoonCount = recommendations.filter((g) => g.days_left !== null && g.days_left !== undefined && g.days_left <= 7).length;
@@ -226,7 +222,6 @@ function FundingMatchContent({ sessionId }) {
             </div>
             <div className={styles['summary-grid']}>
               <div className={styles['summary-cell']}><span>추천 사업</span><b>{recommendations.length}건</b></div>
-              <div className={styles['summary-cell']}><span>최고 매칭률</span><b>{maxMatch !== null ? `${maxMatch}%` : '-'}</b></div>
             </div>
           </div>
 
@@ -305,26 +300,16 @@ function FundingMatchContent({ sessionId }) {
               <div className={styles['content-head']}>
                 <div>
                   <h2>추천 지원사업 리스트</h2>
-                  <p>매칭률이 높은 순서로 정렬되어 있습니다.</p>
+                  <p>현재 확인 가능한 지원사업을 모아보았습니다.</p>
                 </div>
-                <button className={styles.btn} onClick={() => setShowCriteria((value) => !value)}>
-                  {showCriteria ? '매칭 기준 닫기' : '매칭 기준 보기'}
-                </button>
               </div>
               {recommendedAtLabel && (
                 <div className={`${styles['status-message']} ${styles.basis}`}>
                   {recommendedAtLabel} 기준으로 모집 중인 지원사업을 찾아드립니다.
                 </div>
               )}
-              {showCriteria && (
-                <div className={styles['criteria-box']}>
-                  <b>매칭 기준</b>
-                  <span>{sessionId ? '검진 세션에 저장된' : '업로드한 리포트에서 추출한'} 카테고리, 타깃, 서비스 형태, 키워드와 지원사업의 지원대상/분야/마감일을 비교해 매칭률을 표시합니다. 지원사업 다시 찾기를 누른 시점 기준으로 마감되지 않은 공고만 추천합니다.</span>
-                </div>
-              )}
               <div className={styles.metrics}>
                 <div className={styles.metric}><span>추천 사업</span><b>{recommendations.length}</b></div>
-                <div className={styles.metric}><span>평균 매칭률</span><b>{avgMatch !== null ? `${avgMatch}%` : '-'}</b></div>
                 <div className={styles.metric}><span>최대 지원 규모</span><b>{maxAmountLabel}</b></div>
                 <div className={styles.metric}><span>마감 임박</span><b>{closingSoonCount}건</b></div>
               </div>
@@ -336,7 +321,7 @@ function FundingMatchContent({ sessionId }) {
                 </div>
               ) : (
                 <>
-                  <div className={styles['table-head']}><div>지원사업</div><div>매칭률</div><div>마감일</div><div>지원 규모·내용</div><div>다음 단계</div></div>
+                  <div className={styles['table-head']}><div>지원사업</div><div>마감일</div><div>지원 규모·내용</div><div>다음 단계</div></div>
                   <div className={styles.list}>
                     {recommendations.map((grant) => (
                   <article className={styles.grant} key={grant.program_id}>
@@ -349,7 +334,6 @@ function FundingMatchContent({ sessionId }) {
                         ))}
                       </div>
                     </div>
-                    <div className={styles.match}>{grant.match_score}%</div>
                     <div className={styles['cell-main']}>{formatDeadline(grant.deadline)}<span className={styles['cell-sub']}>{ddayLabel(grant.deadline, grant.days_left)}</span></div>
                     <div className={styles['cell-main']}>{amountLabel(grant)}<span className={styles['cell-sub']}>{summarizeTarget(grant)}</span></div>
                     <div className={styles['row-actions']}>
@@ -387,7 +371,6 @@ function FundingMatchContent({ sessionId }) {
               <button className={styles.btn} onClick={closeGrantModal}>닫기</button>
             </div>
             <div className={styles['detail-grid']}>
-              <div><span>매칭률</span><b>{selectedGrant.match_score}%</b></div>
               <div><span>마감일</span><b>{formatDeadline(selectedGrant.deadline)}<br />{ddayLabel(selectedGrant.deadline, selectedGrant.days_left)}</b></div>
               <div><span>{selectedGrant.is_financial_support === false ? '지원 내용' : '지원 규모'}</span><b>{amountLabel(selectedGrant)}</b>{supportTypeTags(selectedGrant).length > 0 && <div className={styles['support-tags']}>{supportTypeTags(selectedGrant).map((tag) => <span className={styles.badge} key={tag}>{tag}</span>)}</div>}</div>
               <div><span>지원대상</span><b>{targetLabel(selectedGrant)}</b></div>
