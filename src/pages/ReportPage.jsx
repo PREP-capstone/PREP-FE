@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cx } from '../utils/cx';
+import { downloadAnalysisReportPdf } from '../api/analysisApi';
+import { getApiErrorCode, API_ERROR_CODES } from '../api/errors';
 import styles from './ReportPage.module.css';
 
 // 이 페이지는 백엔드 POST /api/v1/analysis/evaluate 의 응답(EvaluateResult)을 그대로 받는다.
@@ -150,8 +152,10 @@ function ExpandableText({ children, className, contentTag: ContentTag = 'div', c
 export default function ReportPage({ data, expiresAt = null }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('r');
-  const [isPrintMode, setIsPrintMode] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
+  const [pdfErrorCode, setPdfErrorCode] = useState(null);
 
   const {
     session = {},
@@ -197,12 +201,42 @@ export default function ReportPage({ data, expiresAt = null }) {
     setTab(id);
   }
 
-  function handleSavePdf() {
-    setIsPrintMode(true);
-    window.setTimeout(() => {
-      window.print();
-      setIsPrintMode(false);
-    }, 0);
+  async function handleSavePdf() {
+    if (!session.session_id || pdfDownloading) return;
+    setPdfDownloading(true);
+    setPdfError(null);
+    setPdfErrorCode(null);
+    try {
+      const { blob, filename } = await downloadAnalysisReportPdf(session.session_id);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      const code = getApiErrorCode(error);
+      if (code === API_ERROR_CODES.ANALYSIS_SESSION_NOT_FOUND) {
+        navigate('/input');
+        return;
+      }
+      if (code === API_ERROR_CODES.HEALTH_DATA_REQUIRED) {
+        setPdfError('검진 데이터가 없어 PDF를 만들 수 없습니다. 검진 데이터를 등록한 뒤 다시 검사해주세요.');
+        setPdfErrorCode(code);
+        return;
+      }
+      if (code === API_ERROR_CODES.ANALYSIS_RESULT_REQUIRED) {
+        setPdfError('검진 결과 보관 시간이 만료되었습니다. 다시 검진해주세요.');
+        setPdfErrorCode(code);
+        return;
+      }
+      setPdfError(error.message || 'PDF를 저장하지 못했어요. 잠시 후 다시 시도해주세요.');
+      setPdfErrorCode(code);
+    } finally {
+      setPdfDownloading(false);
+    }
   }
 
   return (
@@ -218,8 +252,8 @@ export default function ReportPage({ data, expiresAt = null }) {
           <span className={styles['page-title']}>검진 결과 리포트</span>
         </div>
         <div className={styles['nav-right']}>
-          <button className={styles['nav-btn']} onClick={handleSavePdf}>
-            <i className="ti ti-download"></i>PDF 저장
+          <button className={styles['nav-btn']} onClick={handleSavePdf} disabled={pdfDownloading}>
+            <i className="ti ti-download"></i>{pdfDownloading ? 'PDF 준비 중...' : 'PDF 저장'}
           </button>
           <button className={styles['nav-btn']} onClick={() => navigate('/input')}>
             <i className="ti ti-arrow-left"></i>검진 다시 하기
@@ -236,6 +270,24 @@ export default function ReportPage({ data, expiresAt = null }) {
           <span>
             입력한 아이디어는 저장하지 않으며, 리포트는 이 브라우저에서 {formatExpiry(expiresAt)}까지 임시로만 보관됩니다.
           </span>
+        </div>
+      )}
+      {pdfError && (
+        <div className={styles['pdf-error']} role="alert">
+          <i className="ti ti-alert-triangle"></i>
+          <span>{pdfError}</span>
+          <button
+            type="button"
+            className={styles['pdf-error-retry']}
+            onClick={pdfErrorCode === API_ERROR_CODES.ANALYSIS_RESULT_REQUIRED || pdfErrorCode === API_ERROR_CODES.HEALTH_DATA_REQUIRED
+              ? () => navigate(retryInputPath)
+              : handleSavePdf}
+            disabled={pdfDownloading}
+          >
+            {pdfErrorCode === API_ERROR_CODES.ANALYSIS_RESULT_REQUIRED || pdfErrorCode === API_ERROR_CODES.HEALTH_DATA_REQUIRED
+              ? '다시 검사하기'
+              : '다시 시도'}
+          </button>
         </div>
       )}
 
@@ -440,9 +492,8 @@ export default function ReportPage({ data, expiresAt = null }) {
           </div>
 
           {/* §01 규제 위험도 */}
-          {(tab === 'r' || isPrintMode) && (
+          {tab === 'r' && (
             <div className={styles['tab-panel']}>
-              <div className={styles['print-tab-title']}>규제 위험도</div>
               <div className={styles['acq-overview']} style={{ marginBottom: 16 }}>
                 <div className={cx(styles, 'acq-card', toLevel(reg.regulatory_grade))}>
                   <div className={styles['acq-name']}>의료행위표현</div>
@@ -517,9 +568,8 @@ export default function ReportPage({ data, expiresAt = null }) {
           )}
 
           {/* §02 데이터 확보 가능성 */}
-          {(tab === 'd' || isPrintMode) && !isFail && (
+          {tab === 'd' && !isFail && (
             <div className={styles['tab-panel']}>
-              <div className={styles['print-tab-title']}>데이터 확보</div>
               {dataFeas ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
@@ -632,9 +682,8 @@ export default function ReportPage({ data, expiresAt = null }) {
           )}
 
           {/* §03 시장 현실성 */}
-          {(tab === 'm' || isPrintMode) && !isFail && (
+          {tab === 'm' && !isFail && (
             <div className={styles['tab-panel']}>
-              <div className={styles['print-tab-title']}>시장 현실성</div>
               {marketFeas ? (
                 <>
                   <div className={styles['mkt-overview']}>
@@ -694,9 +743,8 @@ export default function ReportPage({ data, expiresAt = null }) {
           )}
 
           {/* §04 수익 구조 */}
-          {(tab === 'b' || isPrintMode) && !isFail && (
+          {tab === 'b' && !isFail && (
             <div className={styles['tab-panel']}>
-              <div className={styles['print-tab-title']}>수익 구조</div>
               {bm && bm.recommendations?.length ? (
                 <>
                   <div className={styles.ground} style={{ marginBottom: 14 }}>
@@ -749,7 +797,7 @@ export default function ReportPage({ data, expiresAt = null }) {
         )}
 
         {/* 하단 안내 — 지원사업 매칭 유도 (긍정 프레임). 인쇄 시 제외. */}
-        {!isPrintMode && (
+        {(
           <div className={styles['report-footer-cta']}>
             {isFail ? (
               <>
@@ -758,8 +806,8 @@ export default function ReportPage({ data, expiresAt = null }) {
                   <span>아이디어를 수정해 의료기기 리스크를 낮추면 전체 검진 결과를 다시 확인할 수 있어요.</span>
                 </div>
                 <div className={styles['footer-cta-btns']}>
-                  <button className={styles['nav-btn']} onClick={handleSavePdf}>
-                    <i className="ti ti-download"></i>PDF 저장
+                  <button className={styles['nav-btn']} onClick={handleSavePdf} disabled={pdfDownloading}>
+                    <i className="ti ti-download"></i>{pdfDownloading ? 'PDF 준비 중...' : 'PDF 저장'}
                   </button>
                   <button className={cx(styles, 'nav-btn', 'cta-primary')} onClick={() => navigate(retryInputPath)}>
                     다시 검사하기 <i className="ti ti-arrow-right"></i>
@@ -773,8 +821,8 @@ export default function ReportPage({ data, expiresAt = null }) {
                   <span>PDF를 저장하시면 지원사업 매칭 서비스도 같이 사용 가능해요!</span>
                 </div>
                 <div className={styles['footer-cta-btns']}>
-                  <button className={styles['nav-btn']} onClick={handleSavePdf}>
-                    <i className="ti ti-download"></i>PDF 저장
+                  <button className={styles['nav-btn']} onClick={handleSavePdf} disabled={pdfDownloading}>
+                    <i className="ti ti-download"></i>{pdfDownloading ? 'PDF 준비 중...' : 'PDF 저장'}
                   </button>
                   <button
                     className={cx(styles, 'nav-btn', 'cta-primary')}
@@ -790,33 +838,24 @@ export default function ReportPage({ data, expiresAt = null }) {
 
         {/* 화면 맨 아래 주의 문구 — 한 줄 요약, 누르면 전체 안내가 펼쳐진다. 인쇄(PDF) 시에는 전체를 펼친 채로 포함. */}
         <div className={styles['ai-notice']}>
-          {isPrintMode ? (
-            <div className={styles['ai-notice-body']}>
-              <i className="ti ti-alert-triangle"></i>
-              <span>{`${AI_NOTICE_SUMMARY} ${AI_NOTICE_DETAIL}`}</span>
+          <button
+            type="button"
+            className={styles['ai-notice-toggle']}
+            onClick={() => setNoticeOpen((open) => !open)}
+            aria-expanded={noticeOpen}
+            aria-controls="ai-notice-detail"
+          >
+            <i className="ti ti-alert-triangle"></i>
+            <span className={styles['ai-notice-summary']}>{AI_NOTICE_SUMMARY}</span>
+            <span className={styles['ai-notice-more']}>
+              {noticeOpen ? '접기' : '자세히 보기'}
+              <i className={`ti ${noticeOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`}></i>
+            </span>
+          </button>
+          {noticeOpen && (
+            <div id="ai-notice-detail" className={styles['ai-notice-detail']}>
+              {AI_NOTICE_DETAIL}
             </div>
-          ) : (
-            <>
-              <button
-                type="button"
-                className={styles['ai-notice-toggle']}
-                onClick={() => setNoticeOpen((open) => !open)}
-                aria-expanded={noticeOpen}
-                aria-controls="ai-notice-detail"
-              >
-                <i className="ti ti-alert-triangle"></i>
-                <span className={styles['ai-notice-summary']}>{AI_NOTICE_SUMMARY}</span>
-                <span className={styles['ai-notice-more']}>
-                  {noticeOpen ? '접기' : '자세히 보기'}
-                  <i className={`ti ${noticeOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`}></i>
-                </span>
-              </button>
-              {noticeOpen && (
-                <div id="ai-notice-detail" className={styles['ai-notice-detail']}>
-                  {AI_NOTICE_DETAIL}
-                </div>
-              )}
-            </>
           )}
         </div>
 
