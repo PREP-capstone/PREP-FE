@@ -1,6 +1,6 @@
 .page {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: #f5f5f5;
   color: #111;
 }
@@ -188,23 +188,80 @@
 
 @media (max-width: 760px) {
   .page {
-    flex-direction: column;
+    display: block;
+    min-height: 100dvh;
+  }
+
+  .main {
+    min-width: 0;
+    min-height: 100dvh;
+  }
+
+  .topbar {
+    min-height: 88px;
+    padding: 20px 16px 18px 68px;
+  }
+
+  .topbar h1 {
+    font-size: 23px;
+    word-break: keep-all;
+  }
+
+  .eyebrow {
+    font-size: 12px;
   }
 
   .content {
-    width: calc(100% - 32px);
+    width: 100%;
     padding: 24px 0 56px;
   }
 
   .topbar,
   .hero,
   .section {
-    padding-left: 24px;
-    padding-right: 24px;
+    margin-left: 16px;
+    margin-right: 16px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .topbar {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .hero h2 {
+    font-size: 25px;
+    word-break: keep-all;
+  }
+
+  .hero p,
+  .notice p,
+  .step p,
+  .card p {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+  }
+
+  .hero,
+  .section {
+    padding-top: 24px;
+    padding-bottom: 24px;
+    border-radius: 10px;
   }
 
   .steps,
   .cards {
     grid-template-columns: 1fr;
+  }
+
+  .section h3 {
+    font-size: 19px;
+  }
+
+  .primaryButton {
+    width: 100%;
+    min-height: 48px;
   }
 }

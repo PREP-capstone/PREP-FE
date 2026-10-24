@@ -128,6 +128,25 @@ function maxLevel(...levels) {
   return levels.filter(Boolean).reduce((acc, cur) => (order[cur] > order[acc] ? cur : acc), 'low');
 }
 
+function ExpandableText({ children, className, contentTag: ContentTag = 'div', contentProps }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className={`${className} ${styles['expandable-text']} ${expanded ? styles.expanded : ''}`}>
+      <ContentTag className={styles['expandable-content']} {...contentProps}>{children}</ContentTag>
+      <button
+        type="button"
+        className={styles['expandable-toggle']}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        {expanded ? '접기' : '더보기'}
+        <i className={`ti ${expanded ? 'ti-chevron-up' : 'ti-chevron-down'}`} aria-hidden="true"></i>
+      </button>
+    </div>
+  );
+}
+
 export default function ReportPage({ data, expiresAt = null }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('r');
@@ -443,9 +462,9 @@ export default function ReportPage({ data, expiresAt = null }) {
               </div>
 
               {reg.service_law_description && (
-                <div className={styles.ground} style={{ marginBottom: 14 }}>
+                <ExpandableText className={styles.ground}>
                   {reg.service_law_description}
-                </div>
+                </ExpandableText>
               )}
 
               {(reg.matched_rules?.length ?? 0) > 0 && (
@@ -458,7 +477,9 @@ export default function ReportPage({ data, expiresAt = null }) {
                         {r.exact_phrase_match && <em>직접 문구 매칭</em>}
                       </div>
                       {r.legal_basis?.quote && (
-                        <div className={styles['law-quote']}>{r.legal_basis.quote}</div>
+                        <ExpandableText className={styles['law-quote']}>
+                          {r.legal_basis.quote}
+                        </ExpandableText>
                       )}
                     </div>
                   ))}
@@ -874,13 +895,17 @@ function GateLegalBasis({ basis }) {
       </div>
       <div className={styles['gate-basis-title']}>{heading}</div>
       {lines.length > 0 ? (
-        <blockquote className={styles['gate-basis-quote']} tabIndex={0} aria-label={`${heading} 원문`}>
+        <ExpandableText
+          className={styles['gate-basis-quote']}
+          contentTag="blockquote"
+          contentProps={{ tabIndex: 0, 'aria-label': `${heading} 원문` }}
+        >
           {lines.map((line, i) => (
             <p key={i} className={cx(styles, 'gate-basis-line', line.level !== null && `lv${line.level}`, line.isTitle && 'title')}>
               {line.text}
             </p>
           ))}
-        </blockquote>
+        </ExpandableText>
       ) : (
         <div className={styles['gate-basis-message']}>
           <i className="ti ti-info-circle"></i>

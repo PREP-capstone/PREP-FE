@@ -203,7 +203,7 @@ function FundingMatchContent({ sessionId }) {
       <main className={styles.main}>
         <header className={styles.topbar}>
           <div className={styles['topbar-left']}>
-            <button className={styles['back-btn']} onClick={() => navigate('/')}>
+            <button className={styles['back-btn']} aria-label="메인으로 가기" onClick={() => navigate('/')}>
               <i className="ti ti-arrow-left"></i>메인으로 가기
             </button>
             <span className={styles['topbar-title']}>지원사업 추천</span>

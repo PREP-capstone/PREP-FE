@@ -519,7 +519,7 @@ export default function InputPage() {
       <div className={styles.main}>
         <div className={styles.topbar}>
           <div className={styles['topbar-left']}>
-            <button className={styles['back-btn']} onClick={() => navigate('/')}>
+            <button className={styles['back-btn']} aria-label="메인으로 가기" onClick={() => navigate('/')}>
               <i className="ti ti-arrow-left"></i>메인으로
             </button>
             <span className={styles['topbar-title']}>아이디어 검진</span>
