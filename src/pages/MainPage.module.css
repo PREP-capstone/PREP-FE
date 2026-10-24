@@ -1,6 +1,6 @@
 .page {
   display: flex;
-  min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
   color: #111;
 }
@@ -182,6 +182,7 @@
   .page {
     display: block;
     min-height: 100dvh;
+    height: auto;
   }
 
   .main {
