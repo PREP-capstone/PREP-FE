@@ -156,6 +156,10 @@
   flex-shrink: 0;
 }
 
+.funding-workspace .summary-grid {
+  grid-template-columns: 128px;
+}
+
 .summary-cell {
   border: 1px solid #e8e8e8;
   border-radius: 8px;
@@ -381,6 +385,10 @@
   background: #fafafa;
 }
 
+.funding-results .metrics {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .metric {
   padding: 16px 18px;
   border-right: 1px solid #e8e8e8;
@@ -407,7 +415,7 @@
 .table-head,
 .grant {
   display: grid;
-  grid-template-columns: minmax(360px, 1.8fr) 94px minmax(112px, 0.5fr) minmax(168px, 0.8fr) 118px;
+  grid-template-columns: minmax(360px, 1.8fr) minmax(112px, 0.5fr) minmax(168px, 0.8fr) 118px;
   align-items: stretch;
 }
 
@@ -909,7 +917,7 @@
 }
 
 .wideModal .detail-grid {
-  grid-template-columns: 0.8fr 0.95fr 1.4fr 1.25fr;
+  grid-template-columns: 0.95fr 1.4fr 1.25fr;
 }
 
 .detail-grid div {
@@ -977,6 +985,11 @@
 
   .summary-grid,
   .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .funding-workspace .summary-grid,
+  .funding-results .metrics {
     grid-template-columns: repeat(2, 1fr);
   }
 
