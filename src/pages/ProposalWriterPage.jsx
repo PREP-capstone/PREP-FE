@@ -604,7 +604,7 @@ export default function ProposalWriterPage() {
       <main className={styles.main}>
         <header className={styles.topbar}>
           <div className={styles['topbar-left']}>
-            <button className={styles['back-btn']} onClick={() => navigate('/')}>
+            <button className={styles['back-btn']} aria-label="메인으로 가기" onClick={() => navigate('/')}>
               <i className="ti ti-arrow-left"></i>메인으로 가기
             </button>
             <span className={styles['topbar-title']}>창업 제안서 자동 작성</span>
