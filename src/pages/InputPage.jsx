@@ -168,6 +168,7 @@ export default function InputPage() {
   const [predictWarn, setPredictWarn] = useState(null);
   const [lastPredictedDesc, setLastPredictedDesc] = useState('');
   const latestPredictTextRef = useRef('');
+  const contentRef = useRef(null);
 
   // STEP 3 — 타겟 & 데이터
   const [tags, setTags] = useState({}); // { label: group }
@@ -266,6 +267,7 @@ export default function InputPage() {
 
   function goStep(n) {
     setStep(n);
+    contentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     window.scrollTo(0, 0);
   }
 
@@ -526,7 +528,7 @@ export default function InputPage() {
           </div>
         </div>
 
-        <div className={styles.content}>
+        <div ref={contentRef} className={styles.content}>
           <div className={styles['form-inner']}>
 
             {restoring && (
