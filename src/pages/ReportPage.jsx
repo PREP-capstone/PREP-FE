@@ -61,6 +61,9 @@ const MATCH_SCOPE_FALLBACKS = [
 // 경쟁사 매칭이 insufficient_data일 때만 시장 현실성 탭에 추가로 보여주는 안내 문구.
 const MARKET_NO_MATCH_NOTICE =
   '현재 DB에서는 유사한 서비스를 찾지 못했습니다. 경쟁자가 없다는 뜻이 아니라 아직 수집되지 않았을 수 있으니, 직접 시장 조사를 함께 진행하세요.';
+// 같은 상태(매칭 결과 없음)를 화면 여러 곳에서 같은 말로 보여주기 위한 문구.
+const MARKET_UNDETERMINED_LABEL = '판정 불가';
+const PLATFORM_UNDETERMINED_SUMMARY = '유사 서비스를 찾지 못해 플랫폼 경쟁 여부는 확인할 수 없습니다.';
 
 // 백엔드가 내려주는 등급 문자열(낮음/중간/높음, LOW/MEDIUM/HIGH 등)을 화면용 level 코드로 정규화
 function formatExpiry(value) {
@@ -179,11 +182,15 @@ export default function ReportPage({ data, expiresAt = null }) {
   const dataAvailability = dataAvailabilityLevel(dataLevel);
   const marketLevel = toLevel(marketFeas?.market_realism_grade);
   const bmExists = !!bm && (bm.recommendations?.length ?? 0) > 0;
-  const platformStatus = platformCompetitorStatus(marketFeas?.platform_competitor_exists);
   // 경쟁사 매칭 결과가 없는 상태(insufficient_data). 서버 응답에는 match_level이 포함되지 않고(내부용),
   // 이 경우에만 market_realism_grade가 null로 내려온다. 로컬 판정 mock은 match_level을 직접 준다.
   const marketInsufficient =
     !!marketFeas && (marketFeas.match_level === 'insufficient_data' || marketFeas.market_realism_grade == null);
+  // 매칭 결과가 없으면 서버의 platform_competitor_exists(false)는 "없음"이 아니라 "확인하지 못함"이다.
+  const platformStatus = marketInsufficient
+    ? { label: MARKET_UNDETERMINED_LABEL, level: 'undetermined' }
+    : platformCompetitorStatus(marketFeas?.platform_competitor_exists);
+  const platformSummary = marketInsufficient ? PLATFORM_UNDETERMINED_SUMMARY : marketFeas?.platform_competitor_summary;
   // 매칭 결과가 없을 때는 서버가 보내는 설명 대신 고정 문구를 쓴다 (아래 안내 박스와 내용이 겹치지 않도록).
   const marketMatchDescription =
     marketInsufficient
@@ -380,7 +387,11 @@ export default function ReportPage({ data, expiresAt = null }) {
           </div>
           <div className={cx(styles, 'ind', 'availability', isFail && 'inactive')}>
             <div className={styles['ind-name']}>시장 현실성</div>
-            <div className={cx(styles, 'ind-val', marketLevel || 'mid')}>{marketFeas ? levelLabel(marketLevel) : '—'}</div>
+            {marketFeas && marketInsufficient ? (
+              <div className={styles['ind-val']} style={{ color: '#999' }}>{MARKET_UNDETERMINED_LABEL}</div>
+            ) : (
+              <div className={cx(styles, 'ind-val', marketLevel || 'mid')}>{marketFeas ? levelLabel(marketLevel) : '—'}</div>
+            )}
             {marketFeas && <IndBar level={marketLevel} />}
           </div>
           <div className={cx(styles, 'ind', isFail && 'inactive')}>
@@ -687,9 +698,9 @@ export default function ReportPage({ data, expiresAt = null }) {
               {marketFeas ? (
                 <>
                   <div className={styles['mkt-overview']}>
-                    <div className={cx(styles, 'mkt-card', toLevel(marketFeas.market_realism_grade))}>
+                    <div className={cx(styles, 'mkt-card', marketInsufficient ? 'undetermined' : toLevel(marketFeas.market_realism_grade))}>
                       <div className={styles['mkt-name']}>시장 현실성</div>
-                      <div className={styles['mkt-level']}>{marketFeas.market_realism_grade ?? '—'}</div>
+                      <div className={styles['mkt-level']}>{marketInsufficient ? MARKET_UNDETERMINED_LABEL : (marketFeas.market_realism_grade ?? '—')}</div>
                       <div className={styles['mkt-desc']}>{marketFeas.saturation ?? '-'}</div>
                     </div>
                     <div className={cx(styles, 'mkt-card', 'platform', platformStatus.level)}>
@@ -708,10 +719,10 @@ export default function ReportPage({ data, expiresAt = null }) {
                       <div className={styles['g-dot']}></div>
                       <b>매칭 범위</b> — {marketMatchDescription}
                     </div>
-                      {marketFeas.platform_competitor_summary && (
+                      {platformSummary && (
                         <div className={styles.ground}>
-                          <div className={cx(styles, 'g-dot', marketFeas.platform_competitor_exists ? 'high' : undefined)}></div>
-                          <b>플랫폼 경쟁</b> — {marketFeas.platform_competitor_summary}
+                          <div className={cx(styles, 'g-dot', !marketInsufficient && marketFeas.platform_competitor_exists ? 'high' : undefined)}></div>
+                          <b>플랫폼 경쟁</b> — {platformSummary}
                         </div>
                       )}
                   </div>

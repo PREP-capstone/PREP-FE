@@ -279,6 +279,7 @@
 .mkt-card.platform.risky .mkt-level { color: #c0392b; }
 .mkt-card.platform.safe .mkt-level { color: #2a7a2a; }
 .mkt-card.platform.unknown .mkt-level { color: #d97706; }
+.mkt-card.undetermined .mkt-level, .mkt-card.platform.undetermined .mkt-level { color: #999; }
 .mkt-desc { font-size: 11px; color: #888; }
 .mkt-scope { min-width: 0; font-size: 13px; line-height: 1.55; color: #333; font-weight: 600; word-break: keep-all; overflow-wrap: anywhere; }
 
